@@ -9,6 +9,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent),
   },
   {
+    path: 'admin/events/new',
+    loadComponent: () =>
+      import('./features/admin/create-event.component').then((m) => m.CreateEventComponent),
+  },
+  {
     path: 'kiosk/:eventId',
     resolve: { event: eventResolver },
     loadComponent: () => import('./features/kiosk/kiosk.component').then((m) => m.KioskComponent),

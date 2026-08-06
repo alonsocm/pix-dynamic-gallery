@@ -73,6 +73,12 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = (int)statusCode;
 
-        await context.Response.WriteAsJsonAsync(problemDetails);
+        // The switch above infers ProblemDetails as the common type across its arms (since
+        // ValidationProblemDetails derives from it), which erases the static type even though the
+        // runtime object is still a ValidationProblemDetails. WriteAsJsonAsync<T>'s generic overload
+        // would serialize based on that erased static type — silently dropping ValidationProblemDetails'
+        // own "errors" property. Passing the runtime type explicitly forces System.Text.Json to
+        // serialize the object's actual shape instead.
+        await context.Response.WriteAsJsonAsync(problemDetails, problemDetails.GetType());
     }
 }

@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AppConfigService } from '../config/app-config.service';
-import { EventDto } from '../models/event.model';
+import { CreateEventRequest, EventDto } from '../models/event.model';
 import { PaginatedList } from '../models/paginated-list.model';
 import { PhotoDto } from '../models/photo.model';
 
@@ -15,6 +15,11 @@ export class ApiClient {
   /** GET /api/events/{slug} — slug is the human-readable event identifier used throughout the URLs. */
   getEvent(slug: string): Observable<EventDto> {
     return this.http.get<EventDto>(`${this.config.apiBaseUrl}/api/events/${encodeURIComponent(slug)}`);
+  }
+
+  /** POST /api/events — used by the admin "create event" screen. */
+  createEvent(request: CreateEventRequest): Observable<EventDto> {
+    return this.http.post<EventDto>(`${this.config.apiBaseUrl}/api/events`, request);
   }
 
   /** GET /api/events/{eventId}/photos — eventId here is the real Guid (EventDto.id), not the slug. */

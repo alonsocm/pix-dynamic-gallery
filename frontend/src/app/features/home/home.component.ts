@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 /**
  * `/` — there's no single "home" experience in the product (guests always arrive via a scanned
@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
  */
 @Component({
   selector: 'app-home',
+  imports: [RouterLink],
   template: `
     <div class="flex min-h-screen flex-col items-center justify-center gap-8 px-6 text-center">
       <div>
@@ -52,6 +53,10 @@ import { Router } from '@angular/router';
       <p class="max-w-sm text-xs text-white/30">
         Los invitados llegan escaneando el QR que muestra el kiosk — esta página es solo para operadores.
       </p>
+
+      <a routerLink="/admin/events/new" class="text-sm text-white/50 underline">
+        ¿Sos el operador? Crear evento nuevo →
+      </a>
     </div>
   `,
 })
