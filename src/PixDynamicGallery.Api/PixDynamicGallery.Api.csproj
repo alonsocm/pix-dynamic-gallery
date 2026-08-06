@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PixDynamicGallery.Api</RootNamespace>
+    <UserSecretsId>c8a2e7d1-6b7a-4f3b-9c1e-pixdynamicgallery-api</UserSecretsId>
+    <!--
+      Targets net9.0 for portfolio accuracy. If only the .NET 10 runtime is installed locally,
+      RollForward lets `dotnet run` still execute against it without installing the net9.0 runtime.
+    -->
+    <RollForward>LatestMajor</RollForward>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PixDynamicGallery.Application\PixDynamicGallery.Application.csproj" />
+    <ProjectReference Include="..\PixDynamicGallery.Infrastructure\PixDynamicGallery.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

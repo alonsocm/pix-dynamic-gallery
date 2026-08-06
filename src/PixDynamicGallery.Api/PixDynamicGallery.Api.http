@@ -1,0 +1,6 @@
+@PixDynamicGallery.Api_HostAddress = http://localhost:5219
+
+GET {{PixDynamicGallery.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

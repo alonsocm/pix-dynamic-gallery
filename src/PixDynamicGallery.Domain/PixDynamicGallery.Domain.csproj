@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>PixDynamicGallery.Domain</RootNamespace>
+    <!-- Domain is the innermost layer: intentionally zero third-party dependencies. -->
+  </PropertyGroup>
+
+</Project>

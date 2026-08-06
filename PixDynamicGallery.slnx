@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PixDynamicGallery.Api/PixDynamicGallery.Api.csproj" />
+    <Project Path="src/PixDynamicGallery.Application/PixDynamicGallery.Application.csproj" />
+    <Project Path="src/PixDynamicGallery.Domain/PixDynamicGallery.Domain.csproj" />
+    <Project Path="src/PixDynamicGallery.Infrastructure/PixDynamicGallery.Infrastructure.csproj" />
+  </Folder>
+</Solution>

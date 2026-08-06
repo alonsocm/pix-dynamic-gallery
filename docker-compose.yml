@@ -1,0 +1,105 @@
+
+# Local, batteries-included stack: Postgres + a MinIO S3-compatible bucket (so the whole
+# pipeline works end-to-end with `docker compose up` — no real AWS/Azure account required to try
+# the project). Point `Storage__Provider` at AzureBlob / swap MinIO for real S3 for production.
+#
+# NOTE on the watcher: SparkboothWatcherService watches a *folder path stored on the Event
+# entity*. C:\SparkboothPhotos on the host is bind-mounted into the api container below so events
+# can point WatchFolderPath at /data/sparkbooth (the container-side path — not the Windows one).
+# Docker Desktop's WSL2 backend does NOT reliably forward inotify events for changes made on the
+# Windows side of a bind mount, so don't be surprised if a dropped file only shows up via the
+# watcher's polling fallback (up to Watcher:RefreshIntervalSeconds latency) rather than instantly —
+# this is expected here and is exactly why that fallback exists. For sub-second detection, run the
+# API natively on Windows instead (see README's Deployment notes), where FileSystemWatcher works
+# natively and reliably.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pixdynamicgallery
+      POSTGRES_USER: pix
+      POSTGRES_PASSWORD: pix
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pix -d pixdynamicgallery"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/pix-photos &&
+      mc anonymous set download local/pix-photos
+      "
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: src/PixDynamicGallery.Api/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=pixdynamicgallery;Username=pix;Password=pix"
+      Storage__Provider: AwsS3
+      Storage__PublicRead: "true"
+      Storage__AwsS3__ServiceUrl: "http://minio:9000"
+      Storage__AwsS3__PublicServiceUrl: "http://localhost:9000"
+      Storage__AwsS3__BucketName: pix-photos
+      Storage__AwsS3__Region: us-east-1
+      Storage__AwsS3__AccessKeyId: minioadmin
+      Storage__AwsS3__SecretAccessKey: minioadmin
+      Cors__AllowedOrigins__0: "http://localhost:4200"
+      Watcher__Enabled: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    volumes:
+      - C:/SparkboothPhotos:/data/sparkbooth:ro
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "4200:8080"
+    environment:
+      # Browser-resolved URLs (consumed client-side), not the Docker-internal `api` hostname —
+      # the guest's/kiosk's own browser is what fetches these, not this container.
+      API_BASE_URL: "http://localhost:8080"
+      HUB_BASE_URL: "http://localhost:8080"
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:
+  minio-data:

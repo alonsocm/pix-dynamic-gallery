@@ -1,0 +1,153 @@
+PIX DYNAMIC GALLERY — COMO PROBAR EL BACKEND
+==============================================
+
+Estado al momento de escribir esto: Docker Desktop se instalo via winget, pero
+requiere WSL2 y este equipo no lo tenia. Falta completar ese setup a mano
+porque necesita privilegios de administrador interactivos (UAC) que una
+sesion de automatizacion no puede otorgarse a si misma.
+
+
+PASO 0 — Completar la instalacion de Docker (pendiente, lo haces tu)
+----------------------------------------------------------------------
+1. Abre PowerShell o Windows Terminal COMO ADMINISTRADOR
+   (clic derecho -> "Ejecutar como administrador").
+2. Ejecuta:
+       wsl --install
+3. Reinicia el equipo cuando termine.
+4. Al volver a arrancar Windows, abre Docker Desktop (ya esta instalado)
+   y completa el asistente inicial: aceptar el acuerdo de licencia y
+   dejar que termine de configurar el backend WSL2.
+5. Confirma que quedo arriba: deberia verse el icono de la ballena en la
+   bandeja del sistema sin icono de error.
+
+
+PASO 1 — Levantar el stack completo
+----------------------------------------------------------------------
+Desde la raiz del repo:
+
+    cd D:\src\pix-dynamic-gallery
+    docker compose up --build
+
+Esto levanta:
+  - postgres        (base de datos, puerto 5432)
+  - minio           (almacenamiento S3-compatible, puertos 9000/9001)
+  - minio-init      (crea el bucket "pix-photos" y lo hace publico)
+  - api             (la API .NET, puerto 8080)
+
+La API aplica migraciones y siembra un evento "demo" automaticamente al
+arrancar (solo en Development, que es el ASPNETCORE_ENVIRONMENT por
+defecto en docker-compose.yml).
+
+Verificar que quedo arriba:
+    http://localhost:8080/swagger        -> Swagger UI de la API
+    http://localhost:9001                -> Consola de MinIO (minioadmin / minioadmin)
+
+
+PASO 2 — Smoke test automatico
+----------------------------------------------------------------------
+Script ya preparado en tools/smoke-test.ps1. Hace lo siguiente:
+  1. Comprueba que la API responde.
+  2. Crea un evento de prueba (POST /api/events).
+  3. Sube tools/sample.jpg (imagen JPEG minima valida de 1x1 px) usando el
+     endpoint manual POST /api/events/{eventId}/photos — que corre EXACTAMENTE
+     el mismo pipeline que usaria SparkboothWatcherService al detectar un
+     archivo nuevo (persistir Pending -> subir a storage -> marcar Uploaded
+     -> notificar por SignalR).
+  4. Verifica que la foto aparece en GET /api/events/{eventId}/photos
+     (el feed que alimenta el "muro en vivo").
+  5. Verifica que la URL devuelta por el storage (MinIO) es accesible.
+  6. Imprime el Id del evento creado, para usarlo en el paso 3.
+
+Ejecutar:
+    ./tools/smoke-test.ps1
+
+Si la API corre en otro puerto/host (por ejemplo con `dotnet run` en vez
+de Docker), pasa la URL:
+    ./tools/smoke-test.ps1 -ApiUrl http://localhost:5219
+
+
+PASO 3 — Ver la notificacion SignalR en tiempo real
+----------------------------------------------------------------------
+Archivo ya preparado: tools/signalr-test-client.html
+(pagina HTML autonoma, sin build ni dependencias — usa el cliente SignalR
+desde un CDN. Se abre directo en el navegador con doble clic.)
+
+  1. Abre tools/signalr-test-client.html en el navegador (doble clic).
+  2. Pega el Id (GUID) del evento que imprimio el smoke test en el campo
+     "Event Id".
+  3. Clic en "Conectar".
+  4. Vuelve a correr ./tools/smoke-test.ps1 (o sube otra foto desde
+     Swagger, POST /api/events/{eventId}/photos) y deberias ver en la
+     pagina, en tiempo real:
+       - El evento "OnPhotoUploaded" impreso en el log con
+         {photoId, eventId, url, timestamp}.
+       - La miniatura de la foto renderizada automaticamente.
+
+Esto confirma que el EventHub (grupos por eventId) y el broadcast desde
+IPhotoNotifier funcionan de punta a punta.
+
+
+PASO 4 (opcional) — Probar el watcher real de Sparkbooth
+----------------------------------------------------------------------
+El contenedor Linux de la API no ve carpetas de Windows por defecto, asi
+que hay que montarla explicitamente.
+
+  1. Edita docker-compose.yml y descomenta, dentro del servicio "api":
+
+         volumes:
+           - C:/SparkboothPhotos:/data/sparkbooth:ro
+
+  2. Vuelve a levantar el stack:
+         docker compose up --build
+
+  3. Crea un evento apuntando a la ruta DENTRO del contenedor (no la de
+     Windows), por ejemplo con curl/Swagger:
+
+         POST /api/events
+         {
+           "name": "Prueba Watcher",
+           "slug": "prueba-watcher",
+           "watchFolderPath": "/data/sparkbooth",
+           "guestBaseUrl": "http://localhost:4200"
+         }
+
+  4. Copia un archivo .jpg/.png/.gif a C:\SparkboothPhotos en Windows.
+
+  5. En unos segundos (segun Watcher:RefreshIntervalSeconds, 60s por
+     defecto para detectar el evento nuevo, luego instantaneo para los
+     archivos) deberia aparecer subido. Revisa los logs:
+
+         docker compose logs -f api
+
+  6. Confirmalo con:
+         GET /api/events/prueba-watcher
+         GET /api/events/{eventId}/photos
+
+
+ALTERNATIVA — Probar sin Docker (Postgres + MinIO nativos + dotnet run)
+----------------------------------------------------------------------
+No se hizo por ahora (se eligio esperar a Docker), pero si en algun
+momento se prefiere evitar Docker por completo, la ruta es:
+
+  1. Instalar PostgreSQL localmente (winget install PostgreSQL.PostgreSQL
+     o similar) y crear la base "pixdynamicgallery".
+  2. Descargar minio.exe (binario portable de Windows, sin instalador) y
+     correrlo: minio.exe server C:\minio-data --console-address ":9001"
+  3. Crear el bucket "pix-photos" desde la consola de MinIO
+     (http://localhost:9001) y marcarlo como publico.
+  4. Aplicar migraciones:
+         dotnet ef database update --project src/PixDynamicGallery.Infrastructure --startup-project src/PixDynamicGallery.Api
+  5. Ajustar appsettings.Development.json (o variables de entorno) con la
+     cadena de conexion real y los datos de MinIO local.
+  6. dotnet run --project src/PixDynamicGallery.Api
+
+Esta ruta tiene una ventaja real para probar el watcher: al correr la API
+de forma nativa (no en un contenedor), SparkboothWatcherService puede ver
+directamente cualquier carpeta de Windows sin necesidad de montar volumenes.
+
+
+RESUMEN DE ARCHIVOS DE APOYO CREADOS
+----------------------------------------------------------------------
+  tools/smoke-test.ps1            Script de prueba end-to-end automatico.
+  tools/signalr-test-client.html  Cliente minimo para ver eventos SignalR en vivo.
+  tools/sample.jpg                Imagen JPEG valida minima usada por el smoke test.

@@ -1,0 +1,46 @@
+# .NET
+bin/
+obj/
+out/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Test / coverage
+[Tt]est[Rr]esult*/
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+
+# Publish
+*.pubxml
+*.publishproj
+
+# Angular / Node (frontend arrives in a later step)
+node_modules/
+dist/
+.angular/
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+appsettings.*.local.json
+**/appsettings.Production.json
+
+# Docker
+docker-compose.override.yml
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code local session config (machine-specific, not part of the project)
+.claude/

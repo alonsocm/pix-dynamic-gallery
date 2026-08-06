@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  /* A handful of event-photobooth tokens — not a full design system, just enough for a
+     consistent, vibrant look across the kiosk, guest page and live wall. */
+  --color-brand-500: #ec4899;
+  --color-brand-600: #db2777;
+  --color-ink-900: #18181b;
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --radius-photo: 0.75rem;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-display);
+  background-color: var(--color-ink-900);
+  color: white;
+}

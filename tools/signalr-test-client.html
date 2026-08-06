@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Pix Dynamic Gallery — SignalR test client</title>
+<script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+  input, button { font-size: 1rem; padding: 0.4rem 0.6rem; }
+  #log { background: #111; color: #0f0; padding: 1rem; border-radius: 6px; height: 320px; overflow-y: auto; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 0.85rem; }
+  .status { font-weight: bold; }
+  img.preview { max-width: 200px; display: block; margin-top: 0.5rem; border-radius: 6px; }
+</style>
+</head>
+<body>
+  <h1>🎪 Pix Dynamic Gallery — cliente de prueba SignalR</h1>
+  <p>Herramienta mínima para verificar el <code>EventHub</code> sin esperar al frontend Angular.
+     Ábrelo directamente en el navegador (doble clic) mientras la API corre en local.</p>
+
+  <label>API base URL: <input id="apiUrl" value="http://localhost:8080" size="30" /></label><br/><br/>
+  <label>Event Id (GUID): <input id="eventId" size="40" placeholder="pega aquí el Id del evento" /></label>
+  <button id="connectBtn">Conectar</button>
+  <p class="status">Estado: <span id="status">desconectado</span></p>
+
+  <div id="log"></div>
+
+  <script>
+    const log = (msg) => {
+      const el = document.getElementById('log');
+      el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+      el.scrollTop = el.scrollHeight;
+    };
+
+    document.getElementById('connectBtn').addEventListener('click', async () => {
+      const apiUrl = document.getElementById('apiUrl').value.replace(/\/$/, '');
+      const eventId = document.getElementById('eventId').value.trim();
+      if (!eventId) { alert('Pega el Id (GUID) del evento — lo devuelve POST /api/events o GET /api/events/{slug}'); return; }
+
+      const connection = new signalR.HubConnectionBuilder()
+        .withUrl(`${apiUrl}/hubs/event`)
+        .withAutomaticReconnect()
+        .configureLogging(signalR.LogLevel.Information)
+        .build();
+
+      connection.on('OnPhotoUploaded', (notification) => {
+        log(`✅ OnPhotoUploaded: ${JSON.stringify(notification)}`);
+        const img = document.createElement('img');
+        img.className = 'preview';
+        img.src = notification.url;
+        document.body.appendChild(img);
+      });
+
+      connection.on('OnPhotoFailed', (notification) => {
+        log(`❌ OnPhotoFailed: ${JSON.stringify(notification)}`);
+      });
+
+      connection.onreconnecting(() => document.getElementById('status').textContent = 'reconectando…');
+      connection.onreconnected(() => document.getElementById('status').textContent = 'conectado');
+      connection.onclose(() => document.getElementById('status').textContent = 'desconectado');
+
+      try {
+        await connection.start();
+        document.getElementById('status').textContent = 'conectado';
+        log(`Conectado a ${apiUrl}/hubs/event`);
+
+        await connection.invoke('JoinEventGroup', eventId);
+        log(`Unido al grupo del evento ${eventId}. Esperando fotos...`);
+      } catch (err) {
+        document.getElementById('status').textContent = 'error';
+        log(`Error de conexión: ${err}`);
+      }
+    });
+  </script>
+</body>
+</html>
