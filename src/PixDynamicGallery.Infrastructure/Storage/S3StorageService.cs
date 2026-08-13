@@ -32,6 +32,14 @@ public class S3StorageService(IAmazonS3 s3Client, IOptions<StorageOptions> optio
             ContentType = contentType,
             CannedACL = _publicRead ? S3CannedACL.PublicRead : S3CannedACL.Private,
             AutoCloseStream = false,
+            // The SDK defaults to streaming SigV4 (aws-chunked, "STREAMING-AWS4-HMAC-SHA256-PAYLOAD").
+            // Real AWS S3 and MinIO both support that, but Cloudflare R2 doesn't — uploads fail with
+            // "STREAMING-AWS4-HMAC-SHA256-PAYLOAD not implemented" (confirmed on a real R2 upload).
+            // Disabling it falls back to signing the whole payload up front instead of streaming it in
+            // signed chunks — the SDK buffers/hashes the full body before sending, which is irrelevant
+            // here since photos are a few MB, not multi-GB streams. Works identically against AWS S3
+            // and MinIO too, so this is unconditional, not R2-only.
+            UseChunkEncoding = false,
         };
 
         var response = await s3Client.PutObjectAsync(request, cancellationToken);
