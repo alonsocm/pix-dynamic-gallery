@@ -42,12 +42,15 @@ public class SparkboothWatcherService(
     private readonly ConcurrentDictionary<Guid, FileSystemWatcher> _watchers = new();
 
     /// <summary>
-    /// Per-event set of capture file paths already dispatched (or deliberately skipped as
-    /// pre-existing baseline) — a concurrent set substitute (values are unused) chosen specifically
-    /// for <see cref="ConcurrentDictionary{TKey,TValue}.TryAdd"/>'s atomic "add if absent" semantics,
-    /// which is exactly the primitive needed to dedupe between the FileSystemWatcher callback (fires
-    /// on a ThreadPool thread) and the polling fallback (fires from the refresh loop) racing on the
-    /// same file.
+    /// Per-event set of capture file paths currently claimed — dispatched and still in flight or
+    /// already successfully processed, or deliberately skipped as pre-existing baseline. A
+    /// concurrent set substitute (values are unused) chosen specifically for
+    /// <see cref="ConcurrentDictionary{TKey,TValue}.TryAdd"/>'s atomic "add if absent" semantics,
+    /// the primitive needed to dedupe between the FileSystemWatcher callback (fires on a ThreadPool
+    /// thread) and the polling fallback (fires from the refresh loop) racing on the same file.
+    /// <see cref="OnCaptureFileDetected"/> releases the claim (removes the entry) if dispatch fails,
+    /// so a file is only ever permanently "known" once it's actually been uploaded — see that
+    /// method's doc comment for why.
     /// </summary>
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<string, byte>> _knownFiles = new();
 
@@ -208,6 +211,18 @@ public class SparkboothWatcherService(
     /// <see cref="FileSystemWatcher"/> raises events synchronously on a ThreadPool thread, so
     /// dispatching (DB writes + a cloud upload, which can take seconds) is handed off to
     /// <see cref="Task.Run(Func{Task?})"/> immediately rather than blocking the caller.
+    ///
+    /// <para>
+    /// If dispatch fails, the claim is released so the <em>next</em> poll cycle retries the same
+    /// file instead of it being silently skipped forever — this is what makes the pipeline survive
+    /// the cabin PC briefly losing internet (both Neon and R2 need connectivity; a capture that
+    /// arrives mid-outage would otherwise fail once and never be looked at again, since
+    /// <see cref="FileSystemWatcher"/> only raises <c>Created</c> a single time per file and a
+    /// restart re-seeds already-present files as baseline, not a backlog to retry). The retried
+    /// dispatch is safe because <c>UploadCapturedPhotoCommandHandler</c> is idempotent per
+    /// (eventId, filePath) — it reuses the row from the failed attempt instead of creating a
+    /// duplicate.
+    /// </para>
     /// </summary>
     private void OnCaptureFileDetected(Guid eventId, string filePath)
     {
@@ -233,7 +248,18 @@ public class SparkboothWatcherService(
             catch (Exception ex)
             {
                 logger.LogError(
-                    ex, "Failed to process captured file '{FilePath}' for event {EventId}.", filePath, eventId);
+                    ex, "Failed to process captured file '{FilePath}' for event {EventId}; will retry on the next refresh cycle.",
+                    filePath, eventId);
+
+                // Release the claim so the polling fallback re-dispatches this same file on the next
+                // refresh cycle instead of it being silently dropped forever — the scenario that
+                // matters most is the cabin PC briefly losing internet: both the DB (Neon) and
+                // storage (R2) calls inside the command need connectivity, so a capture that arrives
+                // during an outage would otherwise never be retried once the OS-level file-created
+                // event has already fired once. UploadCapturedPhotoCommandHandler is idempotent per
+                // (EventId, LocalFilePath), so the retry reuses the same Photo row instead of
+                // creating a duplicate.
+                knownFiles.TryRemove(filePath, out _);
             }
         });
     }
