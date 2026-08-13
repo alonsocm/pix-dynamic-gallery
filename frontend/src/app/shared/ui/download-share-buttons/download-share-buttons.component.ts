@@ -80,12 +80,41 @@ export class DownloadShareButtonsComponent {
     }
   }
 
+  /**
+   * Appends a timestamp so every download attempt gets a distinct filename — confirmed on a real
+   * iPhone that re-downloading the *same* photo a second time (same blob content, same filename)
+   * fails on Safari/iOS, which doesn't auto-rename a repeated blob download the way desktop
+   * browsers do. A unique name each time sidesteps that instead of relying on Safari to dedupe.
+   */
   private suggestedFilename(): string {
     const lastSegment = this.url().split('/').pop() || 'foto.jpg';
-    return decodeURIComponent(lastSegment);
+    const decoded = decodeURIComponent(lastSegment);
+    const dotIndex = decoded.lastIndexOf('.');
+    const base = dotIndex > 0 ? decoded.slice(0, dotIndex) : decoded;
+    const extension = dotIndex > 0 ? decoded.slice(dotIndex) : '';
+    return `${base}-${Date.now()}${extension}`;
   }
 
+  /**
+   * Shares the actual image bytes (`files`), not just the URL, when the browser supports it — on
+   * iOS this makes the native share sheet offer "Guardar imagen" (Save Image), which saves
+   * straight to the Photos app. A URL-only share doesn't get that option, only apps to send the
+   * link to. Falls back to URL-only sharing wherever `canShare({ files })` isn't supported.
+   */
   async share(): Promise<void> {
+    try {
+      const response = await fetch(this.url());
+      const blob = await response.blob();
+      const file = new File([blob], this.suggestedFilename(), { type: blob.type });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: this.title() || 'Mi foto' });
+        return;
+      }
+    } catch {
+      // Fetch/File sharing unsupported or failed — fall through to the URL-only share below.
+    }
+
     try {
       await navigator.share({ url: this.url(), title: this.title() || 'Mi foto' });
     } catch {
