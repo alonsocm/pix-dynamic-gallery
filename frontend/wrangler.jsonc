@@ -1,0 +1,18 @@
+{
+  // Config for Cloudflare's unified Workers/Pages deploy (the project's "Deploy command":
+  // `npx wrangler deploy`, run with Root directory = /frontend as its working directory, so
+  // wrangler picks this file up automatically). This is a static-assets-only deployment — no
+  // Worker script (`main`) needed, just the `assets` block below.
+  "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+  "name": "somospix-frontend",
+  "compatibility_date": "2026-08-12",
+  "assets": {
+    // Same output directory `ng build` writes to — see Dockerfile / package.json build script.
+    "directory": "./dist/frontend/browser",
+    // Native SPA fallback (Angular router handles client-side routes like /kiosk/:eventId), the
+    // Wrangler-assets equivalent of the `try_files ... /index.html` rule in docker/nginx.conf.
+    // public/_redirects does the same thing and is kept as a fallback in case this project ever
+    // moves back to classic Pages, but this is the mechanism that actually applies here.
+    "not_found_handling": "single-page-application"
+  }
+}
