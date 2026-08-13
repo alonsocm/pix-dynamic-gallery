@@ -1,7 +1,9 @@
-import { Component, DestroyRef, ElementRef, OnInit, effect, inject, input, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, effect, inject, input, signal, viewChild } from '@angular/core';
 import { EventDto } from '../../core/models/event.model';
+import { PhotoDto } from '../../core/models/photo.model';
 import { SignalRService } from '../../core/signalr/signalr.service';
 import { PhotoGridItemComponent } from './photo-grid-item.component';
+import { PhotoLightboxComponent } from './photo-lightbox.component';
 import { WallPhotosService } from './wall-photos.service';
 
 /**
@@ -13,7 +15,7 @@ import { WallPhotosService } from './wall-photos.service';
  */
 @Component({
   selector: 'app-wall',
-  imports: [PhotoGridItemComponent],
+  imports: [PhotoGridItemComponent, PhotoLightboxComponent],
   providers: [WallPhotosService], // route-scoped: a fresh instance (and fresh state) per navigation into this route
   template: `
     <div class="min-h-screen p-4 sm:p-6">
@@ -22,7 +24,7 @@ import { WallPhotosService } from './wall-photos.service';
       @if (wallPhotos.photos().length > 0) {
         <div class="columns-2 gap-4 sm:columns-3 md:columns-4 lg:columns-5">
           @for (photo of wallPhotos.photos(); track photo.id) {
-            <app-photo-grid-item [photo]="photo" />
+            <app-photo-grid-item [photo]="photo" (select)="openLightbox(photo)" />
           }
         </div>
       } @else if (!wallPhotos.loading()) {
@@ -39,6 +41,10 @@ import { WallPhotosService } from './wall-photos.service';
         <p class="py-4 text-center text-sm text-white/30">Eso es todo por ahora ✨</p>
       }
     </div>
+
+    @if (selectedPhoto(); as photo) {
+      <app-photo-lightbox [photo]="photo" [event]="event()" (close)="closeLightbox()" />
+    }
   `,
 })
 export class WallComponent implements OnInit {
@@ -50,7 +56,15 @@ export class WallComponent implements OnInit {
 
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
 
+  protected readonly selectedPhoto = signal<PhotoDto | null>(null);
+  /** Scroll position saved while the lightbox's body-lock is active, restored on close. */
+  private scrollY = 0;
+
   constructor() {
+    // Belt-and-braces cleanup in case the user navigates away (e.g. browser back) while the
+    // lightbox is open — otherwise the body would stay locked in place on the next page.
+    this.destroyRef.onDestroy(() => this.unlockBodyScroll());
+
     // Realtime merge: every new global lastPhotoUploaded() push gets filtered to this event and
     // prepended (allowSignalWrites — prependRealtime writes wallPhotos.photos internally).
     effect(
@@ -88,5 +102,34 @@ export class WallComponent implements OnInit {
     void this.wallPhotos.loadInitial(eventId);
     void this.signalR.joinEvent(eventId);
     this.destroyRef.onDestroy(() => void this.signalR.leaveEvent(eventId));
+  }
+
+  protected openLightbox(photo: PhotoDto): void {
+    this.selectedPhoto.set(photo);
+    this.lockBodyScroll();
+  }
+
+  protected closeLightbox(): void {
+    this.selectedPhoto.set(null);
+    this.unlockBodyScroll();
+  }
+
+  /**
+   * `overflow: hidden` on the body alone isn't reliable on iOS Safari — the page behind a fixed
+   * overlay can still rubber-band scroll via touchmove. Pinning the body at its current scroll
+   * offset (the standard cross-browser trick) is what actually prevents that.
+   */
+  private lockBodyScroll(): void {
+    this.scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${this.scrollY}px`;
+    document.body.style.width = '100%';
+  }
+
+  private unlockBodyScroll(): void {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    window.scrollTo(0, this.scrollY);
   }
 }

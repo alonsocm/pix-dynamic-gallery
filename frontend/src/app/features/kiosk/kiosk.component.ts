@@ -4,6 +4,7 @@ import { ApiClient } from '../../core/api/api-client.service';
 import { PhotoFailedNotification, PhotoUploadedNotification } from '../../core/models/signalr-notifications.model';
 import { SignalRService } from '../../core/signalr/signalr.service';
 import { EventDto } from '../../core/models/event.model';
+import { buildGuestPhotoUrl } from '../../core/event/guest-photo-url';
 import { QrCodeComponent } from '../../shared/ui/qr-code/qr-code.component';
 
 const FAILED_NOTICE_TTL_MS = 8000;
@@ -81,13 +82,12 @@ export class KioskComponent implements OnInit {
     return this.initialLatestPhoto();
   });
 
-  /** Mirrors Event.BuildGuestPhotoUrl on the backend exactly, now that EventDto exposes guestBaseUrl. */
   protected readonly qrTargetUrl = computed(() => {
     const photo = this.latestPhoto();
     if (!photo) {
       return null;
     }
-    return `${this.event().guestBaseUrl}/e/${this.event().slug}/p/${photo.photoId}`;
+    return buildGuestPhotoUrl(this.event(), photo.photoId);
   });
 
   protected readonly connectionLabel = computed(() => {
