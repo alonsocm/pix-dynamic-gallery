@@ -1,0 +1,5 @@
+# Cloudflare Pages SPA fallback: any path that isn't a real static file resolves to index.html so
+# Angular's router can handle it client-side (e.g. a hard refresh on /e/demo/wall must not 404).
+# Equivalent to the `try_files $uri $uri/ /index.html;` rule in frontend/docker/nginx.conf, used
+# instead for the Docker/self-host deploy path.
+/*    /index.html   200

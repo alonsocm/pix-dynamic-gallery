@@ -1,0 +1,6 @@
+# env.js is baked at build time by scripts/generate-env.mjs — never let it be cached, so a
+# redeploy with new API_BASE_URL/HUB_BASE_URL takes effect immediately instead of being served
+# stale from a visitor's cache. Equivalent to the `location = /env.js` rule in
+# frontend/docker/nginx.conf, used instead for the Docker/self-host deploy path.
+/env.js
+  Cache-Control: no-store, no-cache, must-revalidate

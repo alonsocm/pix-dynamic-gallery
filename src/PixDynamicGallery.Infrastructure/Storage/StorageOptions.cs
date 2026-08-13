@@ -21,6 +21,13 @@ public class StorageOptions
     /// (from <c>Common.Interfaces.IStorageService</c>) can be served straight to guests — the
     /// simplest option for an MVP. Set to false and front the bucket/container with a CDN or
     /// pre-signed URLs for a stricter production setup.
+    /// <para>
+    /// On Cloudflare R2, per-object ACLs are accepted but have no effect (R2 doesn't implement S3
+    /// ACLs) — public access is instead a bucket-level setting in the R2 dashboard (enable the
+    /// <c>r2.dev</c> subdomain, or connect a custom domain). This flag is still honored for
+    /// MinIO/vanilla S3, so leave it true and configure the bucket's own public access separately
+    /// when <see cref="AwsS3Options.PublicUrlBase"/> is set.
+    /// </para>
     /// </summary>
     public bool PublicRead { get; set; } = true;
 
@@ -51,9 +58,22 @@ public class AwsS3Options
     /// Endpoint used only to *build the URLs returned to clients* (browsers can't resolve Docker
     /// service names like <c>minio</c>). Defaults to <see cref="ServiceUrl"/> when unset — set this
     /// separately whenever the API and the browser reach the storage service through different
-    /// hostnames, e.g. <c>http://localhost:9000</c> in local docker-compose.
+    /// hostnames, e.g. <c>http://localhost:9000</c> in local docker-compose. Combined with
+    /// <see cref="BucketName"/> as <c>{PublicServiceUrl}/{BucketName}/{key}</c> (path-style), which
+    /// is what MinIO and vanilla S3-compatible endpoints expect. Ignored when
+    /// <see cref="PublicUrlBase"/> is set.
     /// </summary>
     public string? PublicServiceUrl { get; set; }
+
+    /// <summary>
+    /// Full public base URL prepended directly to the object key, with <em>no</em> bucket path
+    /// segment: <c>{PublicUrlBase}/{key}</c>. Needed for providers whose public URL doesn't include
+    /// the bucket name — e.g. Cloudflare R2's <c>r2.dev</c> subdomain
+    /// (<c>https://pub-xxxx.r2.dev</c>) or a custom domain mapped to the bucket
+    /// (<c>https://fotos.somospix.com</c>). Takes priority over <see cref="PublicServiceUrl"/> when
+    /// set. Leave unset for MinIO/path-style endpoints.
+    /// </summary>
+    public string? PublicUrlBase { get; set; }
 }
 
 public class AzureBlobOptions

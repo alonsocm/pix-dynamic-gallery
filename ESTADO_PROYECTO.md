@@ -1,10 +1,10 @@
 # Estado del proyecto — Pix Dynamic Gallery
 
-> Documento vivo para retomar el trabajo en otra sesión. Última actualización: 6 de agosto de 2026.
+> Documento vivo para retomar el trabajo en otra sesión. Última actualización: 12 de agosto de 2026 (sesión Paso 3).
 
 ## 🎯 Para retomar rápido
 
-Quedamos en: **el usuario está creando las cuentas de Cloudflare y Neon** (Paso 1 de la sección "Pendiente" más abajo). Cuando estén listas, seguimos con el **Paso 2** (provisionar Neon/R2/Tunnel/Pages).
+**Paso 2 completo** ✅ (Neon, R2, Tunnel, Pages provisionados; dominio `somospix.com`). **Paso 3 (código) ya está escrito y compila/builda en local** — falta: (a) el usuario configure Pages en el dashboard con esos ajustes + haga push para que despliegue, (b) decidir acceso público del bucket R2 y anotar la URL resultante, (c) instalar todo físicamente en la PC de la cabina cuando esté disponible. Ver checklist actualizado abajo — el siguiente paso concreto es la sección **"Acciones pendientes del usuario (Paso 3)"**.
 
 Repo: **https://github.com/alonsocm/pix-dynamic-gallery** (público, rama `main`, 2 commits)
 
@@ -79,6 +79,8 @@ docker compose down               # apagar y borrar contenedores (datos sobreviv
 7. Dos eventos de prueba (`demo`, `xv-angie`) quedaron con ruta de Windows en vez de ruta de contenedor — mismo error dos veces, confirma que es un patrón real de confusión (por eso el formulario de admin tiene el toggle Docker/Nativa).
 8. El kiosk no mostraba nada al abrir/refrescar si no llegaba una foto en vivo justo en ese momento — se agregó un fetch REST inicial (`GetEventPhotos` página 1) como estado semilla.
 9. `ExceptionHandlingMiddleware` perdía el campo `errors` en **todas** las respuestas 400 de validación — un `switch` de C# infería el tipo común `ProblemDetails` (no `ValidationProblemDetails`), y `WriteAsJsonAsync<T>` serializaba según ese tipo estático, no el de runtime. Se arregló pasando `problemDetails.GetType()` explícitamente.
+10. `S3StorageService.BuildPublicUrl` armaba siempre `{host}/{bucket}/{key}` (path-style, correcto para MinIO) — pero Cloudflare R2 sirve las fotos sin el nombre del bucket en la ruta (tanto vía `r2.dev` como dominio custom), así que las URLs de fotos hubieran salido rotas en producción. Se agregó `Storage:AwsS3:PublicUrlBase` como override sin segmento de bucket.
+11. Cloudflare Pages (hosting 100% estático) no replica el `try_files ... /index.html` de `nginx.conf` → sin un `_redirects` propio, un refresh en `/kiosk/:eventId` o abrir un link de invitado directo hubiera dado 404 en producción.
 
 ---
 
@@ -98,28 +100,43 @@ docker compose down               # apagar y borrar contenedores (datos sobreviv
 
 Ver la conversación completa para el razonamiento detallado de cada elección (alternativas consideradas: Vercel/Netlify, ngrok, AWS S3 real).
 
-### Paso 1 — Cuentas (usuario) — **EN PROGRESO**
+### Paso 1 — Cuentas (usuario) — ✅ **COMPLETO**
 
-- [ ] Cuenta Cloudflare (gratis)
-- [ ] Cuenta Neon (gratis)
-- [ ] Decidir dominio: ¿uno propio/existente, o arrancar con URLs gratuitas (`*.pages.dev`, `*.trycloudflare.com`) y comprar uno después?
+- [x] Cuenta Cloudflare (gratis)
+- [x] Cuenta Neon (gratis)
+- [x] Dominio: se decidió arrancar con URLs gratuitas (`*.pages.dev`, `*.trycloudflare.com`); dominio propio queda como mejora futura opcional, sin cambios de código.
 
-### Paso 2 — Provisionar recursos (usuario, con guía de Claude)
+### Dominio
 
-- [ ] Neon: crear proyecto → copiar connection string (`postgresql://...?sslmode=require`)
-- [ ] Cloudflare R2: crear bucket → generar API token (Access Key ID + Secret) → anotar endpoint S3 de la cuenta
-- [ ] Cloudflare Tunnel: crear túnel (Zero Trust → Networks → Tunnels) → obtener token para `cloudflared`
-- [ ] Cloudflare Pages: conectar al repo `alonsocm/pix-dynamic-gallery` en GitHub
+- **`somospix.com`** — comprado en Cloudflare Registrar (~$10/año). Necesario porque los Tunnels nombrados de Cloudflare no ofrecen URL gratuita estable (a diferencia de Pages con `*.pages.dev`); la alternativa sin dominio (Quick Tunnel `*.trycloudflare.com`) cambia de URL en cada reinicio de `cloudflared`, inviable para una cabina que se prende/apaga por evento.
+- Uso planeado de subdominios: `api.somospix.com` → API (Tunnel), `somospix.com` (raíz) → frontend (Pages).
 
-### Paso 3 — Código para producción (Claude)
+### Paso 2 — Provisionar recursos (usuario, con guía de Claude) — **EN PROGRESO**
 
-- [ ] Config `Storage:Provider=AwsS3` apuntando a R2 (mismo patrón que MinIO, solo config)
-- [ ] Resolver URL pública de fotos en R2 (bucket público vs dominio custom)
-- [ ] `Cors:AllowedOrigins` → dominio real de producción
-- [ ] Adaptar el mecanismo de `env.js` (hoy pensado para Docker/Nginx) al build de Cloudflare Pages
-- [ ] Script de arranque para la PC de la cabina (API nativa + `cloudflared` juntos)
-- [ ] Instrucciones de instalación en la PC de la cabina: **.NET Runtime** (no el SDK completo), `cloudflared`, copiar el build publicado (sin clonar el repo completo)
-- [ ] Configurar navegador en modo kiosk (pantalla completa) apuntando a la URL de Pages
+- [x] Neon: proyecto `pix-dynamic-gallery` creado → connection string guardado por el usuario (no compartido en el chat)
+- [x] Cloudflare R2: bucket `pix-dynamic-gallery-photos` creado → API token (Account API Token, Object Read & Write, restringido al bucket) generado → Access Key ID + Secret Access Key + endpoint S3 guardados por el usuario (no compartidos en el chat) → falta decidir acceso público al bucket (se retoma en Paso 3, junto con la config de storage)
+- [x] Cloudflare Tunnel: túnel `pix` creado en Zero Trust → Networks → Tunnels. Public Hostname configurado vía la pestaña **"Published application routes"** (el dashboard renombró "Public Hostname" → eso; "Hostname routes" es para redes privadas/WARP, no sirve): `api.somospix.com` → `HTTP` → `localhost:8080`. Token de `cloudflared` pendiente de usar en la PC de la cabina (Paso 3). Status "Inactive" es normal hasta que `cloudflared` corra ahí.
+- [x] Cloudflare Pages: proyecto conectado al repo `alonsocm/pix-dynamic-gallery` en GitHub, dominio custom `somospix.com` agregado. **Primer deploy falló a propósito** — falta root directory (`frontend/`) y env vars, se resuelve en Paso 3.
+
+**Paso 2 → ✅ COMPLETO.**
+
+### Paso 3 — Código para producción — **hecho, no commiteado/pusheado todavía**
+
+- [x] `Storage:AwsS3` ya soportaba apuntar a cualquier endpoint S3-compatible (mismo patrón que MinIO) — **bug real encontrado y arreglado**: `BuildPublicUrl` siempre armaba `{host}/{bucket}/{key}` (path-style), pero R2 (tanto `r2.dev` como dominio custom) sirve las fotos como `{host}/{key}`, **sin** el nombre del bucket en la ruta. Se agregó `Storage:AwsS3:PublicUrlBase` ([StorageOptions.cs](src/PixDynamicGallery.Infrastructure/Storage/StorageOptions.cs), [S3StorageService.cs](src/PixDynamicGallery.Infrastructure/Storage/S3StorageService.cs)) para ese caso; con él seteado, tiene prioridad sobre `PublicServiceUrl`.
+  - Nota: en R2 el ACL por-objeto (`Storage:PublicRead`) se acepta pero no hace nada — el acceso público es un toggle a nivel bucket en el dashboard de R2 (ver siguiente punto).
+  - `Storage:AwsS3:Region` debe ser el string literal `"auto"` para R2 (no es una región real, pero el SDK de AWS necesita algo ahí).
+- [ ] **Acción del usuario en R2**: decidir cómo servir las fotos públicamente — opción rápida: activar el subdominio `r2.dev` del bucket (Settings → Public Access); opción más linda: conectar un dominio custom (ej. `fotos.somospix.com`) al bucket. Cualquiera de las dos da la URL para `Storage:AwsS3:PublicUrlBase`.
+- [x] `Cors:AllowedOrigins` — no requirió cambio de código (ya viene de config/env vars); el valor real (`https://somospix.com`, `https://www.somospix.com`) se setea en `tools/booth/.env.production` (ver más abajo), no está hardcodeado en el repo.
+- [x] Mecanismo de `env.js` adaptado al build de Cloudflare Pages, que es hosting 100% estático (sin entrypoint tipo Docker/Nginx para sustituir en runtime): nuevo hook `prebuild` en [package.json](frontend/package.json) corre [frontend/scripts/generate-env.mjs](frontend/scripts/generate-env.mjs), que hornea `API_BASE_URL`/`HUB_BASE_URL` en `public/env.js` **en build time**, leyendo el mismo `docker/env.template.js` que ya usaba el mecanismo Docker (ese sigue intacto, sin cambios, para docker-compose/self-host). Probado localmente: `npm run build -- --configuration=production` con esas env vars seteadas → `dist/frontend/browser/env.js` sale con las URLs correctas.
+- [x] **Bug adicional encontrado**: Cloudflare Pages no tiene el SPA fallback que sí da `nginx.conf` (`try_files ... /index.html`) — sin esto, refrescar `/kiosk/:eventId` o abrir un link de invitado directo daría 404. Se agregaron [frontend/public/_redirects](frontend/public/_redirects) (fallback a `index.html`) y [frontend/public/_headers](frontend/public/_headers) (no-cache para `env.js`, igual que la regla de nginx).
+- [x] Script de arranque de la cabina: [tools/booth/start-booth.ps1](tools/booth/start-booth.ps1) — carga secretos desde `.env.production` (gitignored, plantilla en [tools/booth/env.production.example](tools/booth/env.production.example)) y levanta la API nativa (`dotnet PixDynamicGallery.Api.dll`) + `cloudflared tunnel run --token ...` en ventanas separadas. Sintaxis y parseo del `.env.production` verificados.
+- [x] Instrucciones de instalación en la PC de la cabina: [tools/booth/README.md](tools/booth/README.md) — instalar **.NET 9 Runtime** (no el SDK), `cloudflared`, `dotnet publish` + copiar salida a `tools/booth/api/` (sin clonar el repo completo), llenar `.env.production`, correr el script. Incluye sección de modo kiosk del navegador y troubleshooting.
+- [x] Modo kiosk documentado en el mismo README: `chrome.exe --kiosk https://somospix.com/kiosk/<eventId>`, deshabilitar salvapantallas/suspensión.
+
+**Falta para que esto tome efecto:**
+1. Revisar los cambios (`git diff`) y decidir si commitear/pushear — al hacerlo, Cloudflare Pages dispara un deploy automático (ya conectado al repo desde el Paso 2).
+2. En el dashboard de Pages, configurar el proyecto (esto no se puede hacer desde código): **Root directory** `frontend`, **Build command** `npm run build -- --configuration=production`, **Output directory** `dist/frontend/browser`, y dos **Environment variables**: `API_BASE_URL=https://api.somospix.com`, `HUB_BASE_URL=https://api.somospix.com`.
+3. Decidir el acceso público del bucket R2 (ver punto de arriba) y anotar la URL para cuando se llene `tools/booth/.env.production`.
 
 ### Paso 4 — Prueba real
 

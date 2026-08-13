@@ -50,6 +50,13 @@ public class S3StorageService(IAmazonS3 s3Client, IOptions<StorageOptions> optio
 
     private string BuildPublicUrl(string objectKey)
     {
+        // PublicUrlBase: no bucket segment in the path at all — e.g. Cloudflare R2's r2.dev
+        // subdomain or a custom domain mapped straight to the bucket.
+        if (!string.IsNullOrWhiteSpace(_options.PublicUrlBase))
+        {
+            return $"{_options.PublicUrlBase.TrimEnd('/')}/{objectKey}";
+        }
+
         // PublicServiceUrl (browser-reachable) takes priority over ServiceUrl (container-internal,
         // used by the SDK client) — they differ whenever the API and the browser reach the storage
         // service through different hostnames, e.g. local docker-compose with MinIO.
