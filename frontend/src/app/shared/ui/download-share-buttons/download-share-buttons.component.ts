@@ -51,6 +51,13 @@ export class DownloadShareButtonsComponent {
    * opened the photo in a new tab instead of saving it). Fetching the bytes and handing the browser
    * a same-origin `blob:` URL sidesteps that restriction. Requires the R2 bucket's CORS policy to
    * allow GET from this site's origin, or the fetch itself fails.
+   *
+   * Two more things confirmed necessary on a real iPhone (Safari): the link has to actually be
+   * attached to the DOM for `.click()` to reliably trigger a download rather than a no-op, and
+   * `URL.revokeObjectURL` can't happen right after `.click()` — Safari shows its own "Do you want
+   * to download this file?" prompt first, and by the time the guest taps through it the blob was
+   * already freed, so the download failed with a generic error. Delaying the revoke gives that
+   * prompt time to be answered.
    */
   async download(): Promise<void> {
     try {
@@ -61,9 +68,11 @@ export class DownloadShareButtonsComponent {
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = this.suggestedFilename();
+      document.body.appendChild(link);
       link.click();
+      link.remove();
 
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
     } catch {
       // CORS blocked, offline, etc. — fall back to just opening it so the guest can long-press
       // and save manually instead of the button silently doing nothing.
