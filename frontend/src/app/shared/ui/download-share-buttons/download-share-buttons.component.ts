@@ -9,13 +9,13 @@ import { Component, input, signal } from '@angular/core';
   selector: 'app-download-share-buttons',
   template: `
     <div class="flex w-full gap-3">
-      <a
-        [href]="url()"
-        download
+      <button
+        type="button"
+        (click)="download()"
         class="flex flex-1 items-center justify-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-ink-900 transition active:scale-95"
       >
         ⬇️ Descargar
-      </a>
+      </button>
 
       @if (canShare()) {
         <button
@@ -43,6 +43,38 @@ export class DownloadShareButtonsComponent {
 
   protected readonly canShare = signal(typeof navigator !== 'undefined' && !!navigator.share);
   protected readonly copied = signal(false);
+
+  /**
+   * The photo lives on a different origin (Cloudflare R2) than the site itself, and the HTML
+   * `download` attribute on a plain `<a href>` is only honored by browsers for same-origin URLs —
+   * cross-origin, they just navigate to it instead (confirmed on a real phone: tapping "Descargar"
+   * opened the photo in a new tab instead of saving it). Fetching the bytes and handing the browser
+   * a same-origin `blob:` URL sidesteps that restriction. Requires the R2 bucket's CORS policy to
+   * allow GET from this site's origin, or the fetch itself fails.
+   */
+  async download(): Promise<void> {
+    try {
+      const response = await fetch(this.url());
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = this.suggestedFilename();
+      link.click();
+
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // CORS blocked, offline, etc. — fall back to just opening it so the guest can long-press
+      // and save manually instead of the button silently doing nothing.
+      window.open(this.url(), '_blank');
+    }
+  }
+
+  private suggestedFilename(): string {
+    const lastSegment = this.url().split('/').pop() || 'foto.jpg';
+    return decodeURIComponent(lastSegment);
+  }
 
   async share(): Promise<void> {
     try {
