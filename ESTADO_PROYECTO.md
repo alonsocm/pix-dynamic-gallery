@@ -118,7 +118,7 @@ Ver la conversación completa para el razonamiento detallado de cada elección (
 ### Paso 2 — Provisionar recursos (usuario, con guía de Claude) — **EN PROGRESO**
 
 - [x] Neon: proyecto `pix-dynamic-gallery` creado → connection string guardado por el usuario (no compartido en el chat)
-- [x] Cloudflare R2: bucket `pix-dynamic-gallery-photos` creado → API token (Account API Token, Object Read & Write, restringido al bucket) generado → Access Key ID + Secret Access Key + endpoint S3 guardados por el usuario (no compartidos en el chat) → falta decidir acceso público al bucket (se retoma en Paso 3, junto con la config de storage)
+- [x] Cloudflare R2: bucket **`pix`** creado (cuenta `0c45f3c5ad49b738624be15c33e99444`) → API token (Account API Token, Object Read & Write, restringido al bucket) generado → Access Key ID + Secret Access Key guardados por el usuario (no compartidos en el chat) → falta decidir acceso público al bucket (se retoma en Paso 3, junto con la config de storage)
 - [x] Cloudflare Tunnel: túnel `pix` creado en Zero Trust → Networks → Tunnels. Public Hostname configurado vía la pestaña **"Published application routes"** (el dashboard renombró "Public Hostname" → eso; "Hostname routes" es para redes privadas/WARP, no sirve): `api.somospix.com` → `HTTP` → `localhost:8080`. Token de `cloudflared` pendiente de usar en la PC de la cabina (Paso 3). Status "Inactive" es normal hasta que `cloudflared` corra ahí.
 - [x] Cloudflare Pages: proyecto conectado al repo `alonsocm/pix-dynamic-gallery` en GitHub, dominio custom `somospix.com` agregado. **Primer deploy falló a propósito** — falta root directory (`frontend/`) y env vars, se resuelve en Paso 3.
 
