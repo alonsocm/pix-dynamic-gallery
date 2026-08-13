@@ -4,7 +4,10 @@
 
 ## 🎯 Para retomar rápido
 
-**Paso 2 completo** ✅ (Neon, R2, Tunnel, Pages provisionados; dominio `somospix.com`). **Paso 3 (código) ya está escrito y compila/builda en local** — falta: (a) el usuario configure Pages en el dashboard con esos ajustes + haga push para que despliegue, (b) decidir acceso público del bucket R2 y anotar la URL resultante, (c) instalar todo físicamente en la PC de la cabina cuando esté disponible. Ver checklist actualizado abajo — el siguiente paso concreto es la sección **"Acciones pendientes del usuario (Paso 3)"**.
+**Paso 2 completo** ✅. **Frontend en Cloudflare Pages, deployado y funcionando** ✅ (`somospix.com`, vía `npx wrangler deploy` — el proyecto usa el flujo nuevo de Cloudflare, Workers unificado con Pages, no el clásico; ver `frontend/wrangler.jsonc`). Faltan 3 cosas para terminar el Paso 3:
+1. Activar acceso público del bucket R2 (usuario, en el dashboard) y anotar la URL resultante.
+2. Instalar/arrancar todo en la PC de la cabina con `tools/booth/` (usuario, requiere estar físicamente ahí).
+3. Paso 4 — prueba real desde celular con datos móviles.
 
 Repo: **https://github.com/alonsocm/pix-dynamic-gallery** (público, rama `main`, 2 commits)
 
