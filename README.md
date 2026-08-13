@@ -195,10 +195,17 @@ provider's free tier, chosen for a specific constraint:
 | Piece | Where | Why |
 |---|---|---|
 | Frontend | **Cloudflare Pages** (`somospix.com`) | Free CDN, auto-deploy from this repo's `main` branch. Deployed via `npx wrangler deploy` — see `frontend/wrangler.jsonc` |
-| API + watcher | **Native on the photobooth cabin PC** | The watcher needs the real local filesystem — it can't run in the cloud without adding a separate sync agent |
-| Exposing the API | **Cloudflare Tunnel** (`api.somospix.com` → `localhost:8080`) | No port-forwarding, works behind any venue's WiFi/NAT, supports WebSockets (SignalR) |
-| Database | **Neon** (serverless Postgres) | Free tier, sleeps when idle — irrelevant for per-event usage |
+| API + watcher (writes, realtime) | **Native on the photobooth cabin PC** | The watcher needs the real local filesystem — it can't run in the cloud without adding a separate sync agent |
+| API standby (reads, always-on) | **Azure Container Apps** (`Watcher:Enabled=false`) | Same Docker image, watcher off — keeps the gallery (wall, guest photo page, creating an event) reachable even when the cabin PC is powered off, since none of those endpoints touch the local filesystem. See `tools/azure-standby/env.example`. |
+| Exposing the cabin's API | **Cloudflare Tunnel** (`api.somospix.com` → `localhost:8080`) | No port-forwarding, works behind any venue's WiFi/NAT, supports WebSockets (SignalR) |
+| Database | **Neon** (serverless Postgres) | Free tier, sleeps when idle — irrelevant for per-event usage, shared by both API instances |
 | Photo storage | **Cloudflare R2** | S3-compatible (same `IStorageService` code as MinIO), and no egress cost — guests repeatedly view/download photos |
+
+The frontend already keeps `apiBaseUrl` (REST) and `hubBaseUrl` (SignalR) as independent config
+values (`AppConfigService`) — `API_BASE_URL` points at the Azure standby instance, `HUB_BASE_URL`
+stays pointed at the cabin's Tunnel. With the cabin off, the gallery still loads (via Azure); only
+realtime push (new photo appearing live on the kiosk/wall) is unavailable, which is expected since
+nothing new is being captured while the watcher isn't running anyway.
 
 **The actual next step to bring an event online is the cabin PC install**, documented end to end
 in [`tools/booth/README.md`](tools/booth/README.md): installing the .NET 9 Runtime (not the SDK)

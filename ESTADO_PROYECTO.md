@@ -1,14 +1,12 @@
 # Estado del proyecto — Pix Dynamic Gallery
 
-> Documento vivo para retomar el trabajo en otra sesión. Última actualización: 12 de agosto de 2026 (sesión Paso 3).
+> Documento vivo para retomar el trabajo en otra sesión. Última actualización: 13 de agosto de 2026 (sesión Paso 5).
 
 ## 🎯 Para retomar rápido
 
-**Paso 2 y Paso 3 (código/config) completos** ✅. Frontend en Cloudflare Pages, deployado y funcionando (`somospix.com`, vía `npx wrangler deploy` — el proyecto usa el flujo nuevo de Cloudflare, Workers unificado con Pages, no el clásico; ver `frontend/wrangler.jsonc`). R2 con Public Development URL activada. `tools/booth/env.production.example` ya tiene todos los valores no-secretos precargados (bucket, endpoint, URL pública, CORS) — solo faltan las 2 credenciales de R2, el connection string de Neon y el token del Tunnel (secretos, el usuario los tiene guardados aparte).
+**Pasos 1-4 completos** ✅ — todo el sistema probado de punta a punta en producción real (cabina + Cloudflare Pages + R2 + Neon + Tunnel), incluyendo desde un iPhone con datos móviles: captura → watcher → R2 → SignalR → kiosk → QR → foto de invitado → descargar → compartir. Varios bugs reales encontrados y arreglados en el camino (ver lista de bugs más abajo, #10-17): subida a R2 rota por streaming signature, descarga rota en Safari (dos veces), fotos perdidas si la cabina se queda sin internet, entre otros.
 
-Quedan dos cosas para terminar el proyecto:
-1. **Instalar/arrancar todo en la PC de la cabina** con `tools/booth/` (requiere estar físicamente ahí — ver `tools/booth/README.md` para el paso a paso completo).
-2. **Paso 4** — prueba real: crear un evento y probarlo desde un celular con datos móviles (no WiFi local).
+**Ahora en curso: Paso 5** — se descubrió que con la cabina apagada, toda la galería (wall, foto de invitado) deja de cargar (504), aunque las fotos sigan intactas en R2/Neon. Plan aprobado para resolverlo con una segunda instancia de la API (sin el watcher) en Azure Container Apps, **sin tocar código**. Ver la sección "Paso 5" más abajo para el checklist, y `C:\Users\Alonso\.claude\plans\tingly-nibbling-ritchie.md` para el razonamiento completo.
 
 Repo: **https://github.com/alonsocm/pix-dynamic-gallery** (público, rama `main`)
 
@@ -103,9 +101,10 @@ docker compose down               # apagar y borrar contenedores (datos sobreviv
 | Pieza | Dónde | Por qué (resumen) |
 |---|---|---|
 | Frontend | **Cloudflare Pages** | CDN gratis sin límite de banda, auto-deploy desde GitHub |
-| API + Watcher | **Nativo en la PC de la cabina** | El watcher necesita el filesystem local — no puede estar en la nube separado sin agregar un agente nuevo |
-| Exponer la API a internet | **Cloudflare Tunnel** | Gratis, sin port-forwarding, funciona detrás de cualquier NAT/WiFi de venue, soporta WebSockets (SignalR) |
-| Base de datos | **Neon** (Postgres serverless) | Free tier generoso, se duerme sin actividad (irrelevante para uso por evento) |
+| API + Watcher (escritura, tiempo real) | **Nativo en la PC de la cabina** | El watcher necesita el filesystem local — no puede estar en la nube separado sin agregar un agente nuevo |
+| API standby (lectura, siempre disponible) | **Azure Container Apps** (`Watcher:Enabled=false`) | Misma imagen Docker, sin el watcher — sirve la galería (wall, foto de invitado, crear evento) aunque la cabina esté apagada. Ver Paso 5. |
+| Exponer la API de la cabina a internet | **Cloudflare Tunnel** | Gratis, sin port-forwarding, funciona detrás de cualquier NAT/WiFi de venue, soporta WebSockets (SignalR) |
+| Base de datos | **Neon** (Postgres serverless) | Free tier generoso, se duerme sin actividad (irrelevante para uso por evento), compartida por ambas instancias de la API |
 | Storage de fotos | **Cloudflare R2** | S3-compatible (mismo código que MinIO), free tier, y **sin costo de egress** — clave porque los invitados descargan/ven fotos repetidamente |
 
 Ver la conversación completa para el razonamiento detallado de cada elección (alternativas consideradas: Vercel/Netlify, ngrok, AWS S3 real).
@@ -144,10 +143,23 @@ Ver la conversación completa para el razonamiento detallado de cada elección (
 
 **El deploy de Pages resultó más enredado de lo previsto** (ver bugs #11 y #12 más arriba): el proyecto usa el flujo nuevo de Cloudflare (Workers unificado con Pages, `npx wrangler deploy`), no el clásico con un campo simple de "output directory". Hubo que agregar [frontend/wrangler.jsonc](frontend/wrangler.jsonc) y, en el primer intento real, el `_redirects` clásico chocó con el `not_found_handling` nativo de Wrangler ("Infinite loop detected") — se resolvió dejando solo el mecanismo nativo. **Confirmado funcionando en el segundo intento.**
 
-### Paso 4 — Prueba real
+### Paso 4 — Prueba real — ✅ **COMPLETO**
 
-- [ ] Crear un evento de prueba en el entorno de producción
-- [ ] Probar **desde un celular con datos móviles** (no WiFi local) para confirmar accesibilidad real desde internet
+- [x] Evento de prueba creado en producción (`xv-angie`)
+- [x] Probado **desde un iPhone con datos móviles** (no WiFi local): captura → watcher → R2 → SignalR → kiosk → QR → foto de invitado → descargar → compartir. Todo el circuito confirmado funcionando de punta a punta.
+
+### Paso 5 — Galería disponible con la cabina apagada — **EN PROGRESO**
+
+Motivo: se descubrió (probando el Paso 4) que con la cabina apagada, `api.somospix.com` responde 504 — el wall/página de invitado dejan de funcionar por completo aunque las fotos sigan intactas en R2/Neon, porque el frontend solo sabe hablar con la API, nunca directo con la base o el storage. Plan completo y razonamiento en `C:\Users\Alonso\.claude\plans\tingly-nibbling-ritchie.md` (aprobado). Resumen:
+
+- Segunda instancia de la **misma** API (mismo `Dockerfile`, cero cambios de código) en **Azure Container Apps**, con `Watcher:Enabled=false` — sirve lectura/escritura REST (evento, fotos, crear evento) sin depender de la cabina, porque ninguno de esos endpoints toca el filesystem local.
+- El frontend ya separaba `apiBaseUrl` de `hubBaseUrl` en `AppConfigService` — sin tocar código, `API_BASE_URL` (Pages) pasa a apuntar a Azure, `HUB_BASE_URL` sigue apuntando a la cabina (tiempo real solo mientras el evento está en curso).
+
+Checklist:
+
+- [ ] Azure: crear Container App desde `src/PixDynamicGallery.Api/Dockerfile`, 0.25 vCPU / 0.5 GiB, min replicas = 1, env vars según [tools/azure-standby/env.example](tools/azure-standby/env.example) (mismos valores de Neon/R2 que la cabina, más `Watcher__Enabled=false`)
+- [ ] Cloudflare Pages: `API_BASE_URL` → hostname de Azure, `HUB_BASE_URL` sin cambios, redeploy
+- [ ] Verificar: cabina apagada → wall/foto de invitado siguen cargando (vía Azure); cabina prendida → tiempo real sigue funcionando igual que antes
 
 ### Explícitamente pospuesto (a pedido del usuario)
 
