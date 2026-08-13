@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using PixDynamicGallery.Api.Auth;
 using PixDynamicGallery.Application.Common.Models;
+using PixDynamicGallery.Application.Photos.Commands.DeletePhotos;
 using PixDynamicGallery.Application.Photos.Commands.UploadCapturedPhoto;
 using PixDynamicGallery.Application.Photos.Dtos;
 using PixDynamicGallery.Application.Photos.Queries.GetEventPhotos;
@@ -84,4 +86,20 @@ public class PhotosController(ISender sender) : ControllerBase
             }
         }
     }
+
+    /// <summary>
+    /// Admin-only bulk hard-delete. POST (not DELETE-with-body) to sidestep client/proxy
+    /// ambiguity around bodies on HTTP DELETE.
+    /// </summary>
+    [HttpPost("delete")]
+    [AdminAuth]
+    [ProducesResponseType(typeof(DeletePhotosResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<DeletePhotosResult>> DeletePhotos(Guid eventId, DeletePhotosRequest request, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new DeletePhotosCommand { EventId = eventId, PhotoIds = request.PhotoIds }, cancellationToken);
+        return Ok(result);
+    }
 }
+
+public record DeletePhotosRequest(List<Guid> PhotoIds);

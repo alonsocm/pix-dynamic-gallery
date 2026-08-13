@@ -41,8 +41,9 @@ function absoluteUrlValidator(): ValidatorFn {
 }
 
 /**
- * `/admin/events/new` — no auth (consistent with the rest of the system today, see README);
- * this is a convenience UI over `POST /api/events`, which already existed and is unchanged.
+ * `/admin/events/new` — behind the admin password gate (see adminAuthGuard). This is a
+ * convenience UI over `POST /api/events`, which already existed and is unchanged (that endpoint
+ * itself still has no server-side check — only the admin section's own routes/UI are gated).
  */
 @Component({
   selector: 'app-create-event',

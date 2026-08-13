@@ -83,5 +83,7 @@ public class Event : BaseEntity
         return photo;
     }
 
+    public void Activate() => IsActive = true;
+
     public void Deactivate() => IsActive = false;
 }

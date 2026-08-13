@@ -1,4 +1,5 @@
 using System.Reflection;
+using PixDynamicGallery.Api.Auth;
 using PixDynamicGallery.Api.Hubs;
 using PixDynamicGallery.Api.Middleware;
 using PixDynamicGallery.Application;
@@ -53,6 +54,15 @@ try
             options.IncludeXmlComments(xmlPath);
         }
     });
+
+    // Admin-only endpoints (event list/toggle, bulk photo delete) — see AdminAuthAttribute. Empty
+    // password (the default) means the check is skipped entirely, so local dev/docker-compose
+    // needs zero setup.
+    builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection(AdminOptions.SectionName));
+    if (string.IsNullOrEmpty(builder.Configuration[$"{AdminOptions.SectionName}:Password"]))
+    {
+        Log.Warning("Admin:Password is not set — the admin area (event list, active toggle, photo delete) is unprotected.");
+    }
 
     var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
     builder.Services.AddCors(options =>

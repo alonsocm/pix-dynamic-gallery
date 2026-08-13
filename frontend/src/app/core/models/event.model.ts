@@ -9,6 +9,11 @@ export interface EventDto {
   photoCount: number;
 }
 
+/** Mirrors PixDynamicGallery.Application.Events.Dtos.AdminEventDto — admin-only, never returned by the public GetBySlug endpoint. */
+export interface AdminEventDto extends EventDto {
+  watchFolderPath: string;
+}
+
 /** Mirrors PixDynamicGallery.Application.Events.Commands.CreateEvent.CreateEventCommand (request body). */
 export interface CreateEventRequest {
   name: string;
