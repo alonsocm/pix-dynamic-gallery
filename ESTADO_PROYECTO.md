@@ -148,18 +148,21 @@ Ver la conversación completa para el razonamiento detallado de cada elección (
 - [x] Evento de prueba creado en producción (`xv-angie`)
 - [x] Probado **desde un iPhone con datos móviles** (no WiFi local): captura → watcher → R2 → SignalR → kiosk → QR → foto de invitado → descargar → compartir. Todo el circuito confirmado funcionando de punta a punta.
 
-### Paso 5 — Galería disponible con la cabina apagada — **EN PROGRESO**
+### Paso 5 — Galería disponible con la cabina apagada — ✅ **COMPLETO**
 
-Motivo: se descubrió (probando el Paso 4) que con la cabina apagada, `api.somospix.com` responde 504 — el wall/página de invitado dejan de funcionar por completo aunque las fotos sigan intactas en R2/Neon, porque el frontend solo sabe hablar con la API, nunca directo con la base o el storage. Plan completo y razonamiento en `C:\Users\Alonso\.claude\plans\tingly-nibbling-ritchie.md` (aprobado). Resumen:
+Motivo: se descubrió (probando el Paso 4) que con la cabina apagada, `api.somospix.com` responde 504 — el wall/página de invitado dejan de funcionar por completo aunque las fotos sigan intactas en R2/Neon, porque el frontend solo sabe hablar con la API, nunca directo con la base o el storage. Plan completo y razonamiento en `C:\Users\Alonso\.claude\plans\tingly-nibbling-ritchie.md`. Resumen:
 
 - Segunda instancia de la **misma** API (mismo `Dockerfile`, cero cambios de código) en **Azure Container Apps**, con `Watcher:Enabled=false` — sirve lectura/escritura REST (evento, fotos, crear evento) sin depender de la cabina, porque ninguno de esos endpoints toca el filesystem local.
 - El frontend ya separaba `apiBaseUrl` de `hubBaseUrl` en `AppConfigService` — sin tocar código, `API_BASE_URL` (Pages) pasa a apuntar a Azure, `HUB_BASE_URL` sigue apuntando a la cabina (tiempo real solo mientras el evento está en curso).
 
 Checklist:
 
-- [ ] Azure: crear Container App desde `src/PixDynamicGallery.Api/Dockerfile`, 0.25 vCPU / 0.5 GiB, min replicas = 1, env vars según [tools/azure-standby/env.example](tools/azure-standby/env.example) (mismos valores de Neon/R2 que la cabina, más `Watcher__Enabled=false`)
-- [ ] Cloudflare Pages: `API_BASE_URL` → hostname de Azure, `HUB_BASE_URL` sin cambios, redeploy
-- [ ] Verificar: cabina apagada → wall/foto de invitado siguen cargando (vía Azure); cabina prendida → tiempo real sigue funcionando igual que antes
+- [x] Imagen construida localmente (`docker build`) desde `src/PixDynamicGallery.Api/Dockerfile` y subida a **Docker Hub** (`alonsopix/pix-gallery-api:latest`, repo público) — se descartó Azure Container Registry por tener costo mensual (rompía el objetivo de $0/mes).
+- [x] Azure Container App **`pix-gallery`** creada (Resource Group `pix`, entorno `managedEnvironment-pix-9ed3`, región West US): 0.25 vCPU / 0.5 GiB, Ingress externo HTTP puerto `8080`, env vars según [tools/azure-standby/env.example](tools/azure-standby/env.example) (mismos valores de Neon/R2 que la cabina, más `Watcher__Enabled=false`). URL pública: `https://pix-gallery.mangograss-89e14f71.westus.azurecontainerapps.io`.
+  - **Réplicas mínimas venía en 0 por defecto** (hubiera introducido el mismo cold-start que se quería evitar) → corregido a **1** en Escalado (Scale), aplicado como nueva revisión.
+  - Verificado con `curl` (incluyendo headers CORS con `Origin: https://somospix.com`): responde 200 con datos reales de Neon (evento `xv-angie`, sus fotos con URLs de R2).
+- [x] Cloudflare Pages: `API_BASE_URL` → `https://pix-gallery.mangograss-89e14f71.westus.azurecontainerapps.io`, `HUB_BASE_URL` sin cambios (`https://api.somospix.com`), redeploy confirmado (`https://somospix.com/env.js` refleja la nueva URL).
+- [x] **Verificado end-to-end con la cabina realmente apagada**: `https://somospix.com/e/xv-angie/wall` carga las fotos con normalidad.
 
 ### Explícitamente pospuesto (a pedido del usuario)
 
