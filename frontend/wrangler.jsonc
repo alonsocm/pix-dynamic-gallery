@@ -3,16 +3,20 @@
   // `npx wrangler deploy`, run with Root directory = /frontend as its working directory, so
   // wrangler picks this file up automatically). This is a static-assets-only deployment — no
   // Worker script (`main`) needed, just the `assets` block below.
+  // Must match the actual Worker/Pages project name in the Cloudflare dashboard — a mismatch here
+  // makes Wrangler override it with a warning and offer to auto-open a PR to "fix" this file.
   "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
-  "name": "somospix-frontend",
+  "name": "pix-gallery",
   "compatibility_date": "2026-08-12",
   "assets": {
     // Same output directory `ng build` writes to — see Dockerfile / package.json build script.
     "directory": "./dist/frontend/browser",
     // Native SPA fallback (Angular router handles client-side routes like /kiosk/:eventId), the
     // Wrangler-assets equivalent of the `try_files ... /index.html` rule in docker/nginx.conf.
-    // public/_redirects does the same thing and is kept as a fallback in case this project ever
-    // moves back to classic Pages, but this is the mechanism that actually applies here.
+    // Do NOT also add a public/_redirects catch-all (`/* /index.html 200`) alongside this — the
+    // two mechanisms fight over the same fallback and Wrangler rejects the deploy with "Infinite
+    // loop detected in this rule" (confirmed on a real deploy attempt). This is the only
+    // SPA-fallback mechanism in play for this project.
     "not_found_handling": "single-page-application"
   }
 }
