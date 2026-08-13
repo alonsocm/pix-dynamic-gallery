@@ -4,9 +4,14 @@
 
 ## 🎯 Para retomar rápido
 
-**Pasos 1-4 completos** ✅ — todo el sistema probado de punta a punta en producción real (cabina + Cloudflare Pages + R2 + Neon + Tunnel), incluyendo desde un iPhone con datos móviles: captura → watcher → R2 → SignalR → kiosk → QR → foto de invitado → descargar → compartir. Varios bugs reales encontrados y arreglados en el camino (ver lista de bugs más abajo, #10-17): subida a R2 rota por streaming signature, descarga rota en Safari (dos veces), fotos perdidas si la cabina se queda sin internet, entre otros.
+**Proyecto completo, Pasos 1-5 ✅** — todo el sistema probado de punta a punta en producción real:
 
-**Ahora en curso: Paso 5** — se descubrió que con la cabina apagada, toda la galería (wall, foto de invitado) deja de cargar (504), aunque las fotos sigan intactas en R2/Neon. Plan aprobado para resolverlo con una segunda instancia de la API (sin el watcher) en Azure Container Apps, **sin tocar código**. Ver la sección "Paso 5" más abajo para el checklist, y `C:\Users\Alonso\.claude\plans\tingly-nibbling-ritchie.md` para el razonamiento completo.
+- Cabina (API nativa + `cloudflared`) + Cloudflare Pages + R2 + Neon + Tunnel, probado desde un iPhone con datos móviles: captura → watcher → R2 → SignalR → kiosk → QR → foto de invitado → descargar → compartir.
+- **Galería sigue disponible con la cabina apagada** (Paso 5): segunda instancia de la misma API, sin el watcher, siempre encendida en **Azure Container Apps** (`pix-gallery`, West US) — el frontend usa `apiBaseUrl` (→ Azure, siempre) y `hubBaseUrl` (→ cabina, solo tiempo real) por separado.
+
+Varios bugs reales encontrados y arreglados en el camino (ver lista de bugs más abajo, #10-17): subida a R2 rota por streaming signature, descarga rota en Safari (dos veces), fotos perdidas si la cabina se queda sin internet, réplicas mínimas de Azure en 0 por defecto, entre otros.
+
+No quedan pasos pendientes del plan original. Lo que sigue son las "Mejoras recomendadas, no bloqueantes" más abajo (miniaturas, autenticación de admin, `/health`, tests) — ninguna es urgente para usar el sistema en un evento real.
 
 Repo: **https://github.com/alonsocm/pix-dynamic-gallery** (público, rama `main`)
 
