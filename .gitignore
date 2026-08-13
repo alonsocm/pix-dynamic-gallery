@@ -18,6 +18,7 @@ coverage/
 # Publish
 *.pubxml
 *.publishproj
+publish-output/
 
 # Angular / Node (frontend arrives in a later step)
 node_modules/
