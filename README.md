@@ -5,8 +5,11 @@ where Sparkbooth saves each capture, uploads it to cloud storage, and pushes it 
 SignalR — to a kiosk screen (with a dynamic QR code) and to every guest's phone via a mobile-first
 PWA and a Pinterest-style live wall.
 
-> **Status:** Backend MVP complete (.NET 9, Clean Architecture). Angular frontend is the next
-> increment — see [Roadmap](#roadmap).
+> **Status:** Full stack built and running in production — backend (.NET 9), frontend (Angular 22
+> on Cloudflare Pages), Neon Postgres, Cloudflare R2 storage, Cloudflare Tunnel. The one remaining
+> step is installing it on the actual photobooth cabin PC — see
+> [Production deployment](#production-deployment). For the detailed history of every provisioning
+> decision and the current state of each step, see [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md).
 
 ## How it works
 
@@ -98,15 +101,18 @@ docker compose up --build
 ```
 
 This starts Postgres, a MinIO bucket (S3-compatible, so the storage pipeline works without a real
-AWS/Azure account), and the API on **http://localhost:8080** (Swagger at `/swagger` in
-Development). Migrations run automatically on startup; a `demo` event is seeded.
+AWS/Azure account), the API on **http://localhost:8080** (Swagger at `/swagger` in Development),
+and the Angular frontend on **http://localhost:4200**. Migrations run automatically on startup; a
+`demo` event is seeded.
 
 > The watcher monitors a folder path stored *on the `Event` row*, not a path baked into the
-> container. To let the containerized API see files Sparkbooth writes on the Windows host, bind
-> mount that folder (see the commented `volumes:` entry in `docker-compose.yml`) and set the
-> event's `WatchFolderPath` to the container-side path, not the Windows one. For a real kiosk
-> deployment, it's usually simpler to run the API natively on the kiosk PC — see
-> [Deployment notes](#deployment-notes).
+> container. To let the containerized API see files Sparkbooth writes on the Windows host, that
+> folder is bind-mounted in `docker-compose.yml` (the API service's `volumes:` entry, currently
+> `C:\SparkboothPhotos` → `/data/sparkbooth`) — set the event's `WatchFolderPath` to the
+> container-side path, not the Windows one, or events will point at a path the container can't see
+> (a real bug hit twice during development, see the bugs list in `ESTADO_PROYECTO.md`). For a real
+> kiosk deployment, run the API natively on the kiosk PC instead — see
+> [Production deployment](#production-deployment).
 
 ### Option B — Local .NET
 
@@ -148,7 +154,7 @@ environment variables (`Storage__AwsS3__BucketName`), or user-secrets in Develop
 | `ConnectionStrings:Postgres` | EF Core / Npgsql connection string |
 | `Storage:Provider` | `AwsS3` or `AzureBlob` |
 | `Storage:PublicRead` | Whether uploaded objects are set public-read (MVP default) |
-| `Storage:AwsS3:*` | Bucket, region, credentials; `ServiceUrl`/`PublicServiceUrl` for S3-compatible endpoints (MinIO) |
+| `Storage:AwsS3:*` | Bucket, region, credentials; `ServiceUrl`/`PublicServiceUrl` for S3-compatible endpoints (MinIO); `PublicUrlBase` instead for providers whose public URL has no bucket segment (Cloudflare R2) |
 | `Storage:AzureBlob:*` | Connection string, container name |
 | `Watcher:Enabled` | Master on/off switch for `SparkboothWatcherService` |
 | `Watcher:RefreshIntervalSeconds` | How often the watcher re-reads active events from the DB |
@@ -170,21 +176,50 @@ Full request/response contracts are in Swagger (`/swagger`) when running in Deve
 ## Roadmap
 
 1. ~~Backend: Clean Architecture, SignalR, cloud storage, watcher~~ ✅
-2. **Angular 18/19 frontend** (standalone components, signals, `@defer`): `/kiosk/:eventId`,
-   `/e/:eventId/p/:photoId`, `/e/:eventId/wall`
-3. Client-side QR generation on the kiosk (no external API)
-4. Authentication for event management endpoints
-5. Integration tests (`WebApplicationFactory`) + unit tests for Application handlers
+2. ~~Angular 22 frontend (standalone components, signals, zoneless): kiosk, guest PWA, live wall,
+   admin~~ ✅
+3. ~~Client-side QR generation on the kiosk (no external API)~~ ✅
+4. ~~Production deploy: Cloudflare Pages (frontend), R2 (storage), Neon (Postgres), Tunnel (API)~~
+   ✅ — see [Production deployment](#production-deployment)
+5. **Install and run on the actual photobooth cabin PC** — see
+   [`tools/booth/README.md`](tools/booth/README.md)
+6. Real-world test: create an event and use it from a phone on mobile data (not local WiFi)
+7. Authentication for event management endpoints
+8. Integration tests (`WebApplicationFactory`) + unit tests for Application handlers
 
-## Deployment notes
+## Production deployment
 
-- The API is stateless aside from the watcher's in-memory `FileSystemWatcher` handles — scale
-  horizontally only if you disable `Watcher:Enabled` on the extra replicas (otherwise every replica
-  uploads the same file).
-- For a real kiosk, running the API natively on the Windows kiosk PC (as a Windows Service, e.g.
-  via `dotnet publish` + `sc.exe create`, or `Microsoft.Extensions.Hosting.WindowsServices`) is
-  simpler than solving container-to-host filesystem watching — the watcher then points straight at
-  `C:\SparkboothPhotos\...` with no bind mount involved.
+Target cost: **$0/month** (+ ~$10/year for the domain). Each piece runs on a different
+provider's free tier, chosen for a specific constraint:
+
+| Piece | Where | Why |
+|---|---|---|
+| Frontend | **Cloudflare Pages** (`somospix.com`) | Free CDN, auto-deploy from this repo's `main` branch. Deployed via `npx wrangler deploy` — see `frontend/wrangler.jsonc` |
+| API + watcher | **Native on the photobooth cabin PC** | The watcher needs the real local filesystem — it can't run in the cloud without adding a separate sync agent |
+| Exposing the API | **Cloudflare Tunnel** (`api.somospix.com` → `localhost:8080`) | No port-forwarding, works behind any venue's WiFi/NAT, supports WebSockets (SignalR) |
+| Database | **Neon** (serverless Postgres) | Free tier, sleeps when idle — irrelevant for per-event usage |
+| Photo storage | **Cloudflare R2** | S3-compatible (same `IStorageService` code as MinIO), and no egress cost — guests repeatedly view/download photos |
+
+**The actual next step to bring an event online is the cabin PC install**, documented end to end
+in [`tools/booth/README.md`](tools/booth/README.md): installing the .NET 9 Runtime (not the SDK)
+and `cloudflared`, publishing the API, filling in the R2/Neon/Tunnel secrets, and configuring the
+kiosk browser. For the full history of *why* each provider/choice was picked and the current state
+of every provisioning step, see [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md).
+
+### Local Docker vs. production
+
+`docker compose up` (Option A above) is for **local development only** — MinIO stands in for R2,
+and the watcher's polling fallback compensates for Docker Desktop/WSL2 not forwarding `inotify`
+events for Windows bind mounts (see the comment atop `docker-compose.yml`). Production doesn't use
+Docker for the API at all (see table above), and Cloudflare Pages builds the frontend straight from
+`frontend/` without the Docker image either — `frontend/docker/*` only matters for a self-hosted
+Docker deploy, not for the Cloudflare Pages path.
+
+### Scaling
+
+The API is stateless aside from the watcher's in-memory `FileSystemWatcher` handles — scale
+horizontally only if you disable `Watcher:Enabled` on the extra replicas (otherwise every replica
+uploads the same file). In practice there's a single cabin PC per event, so this doesn't apply yet.
 
 ---
 
