@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
@@ -12,6 +13,7 @@ public class S3StorageService(
     IAmazonS3 s3Client,
     IHttpClientFactory httpClientFactory,
     IOptions<StorageOptions> options,
+    IConfiguration configuration,
     ILogger<S3StorageService> logger)
     : IStorageService
 {
@@ -71,6 +73,15 @@ public class S3StorageService(
     /// fail. Doing the wait here instead hides it inside the upload pipeline, where it overlaps with
     /// time the guest already spends walking to their phone/scanning the QR.
     /// <para>
+    /// R2's response varies by request `Origin` (`Vary: Origin`, since the CORS headers it echoes
+    /// back differ per origin) — Cloudflare's edge caches each `Origin` as a <em>separate</em> entry
+    /// for the same URL. Confirmed live: warming up with a plain, headerless GET (what this originally
+    /// did) only populated the no-`Origin` variant — the one `&lt;img&gt;` tags and top-level
+    /// navigation use — while the guest's actual download button uses `fetch()`, a CORS request that
+    /// sends `Origin: https://somospix.com`, hitting a still-cold variant of the exact same URL. So
+    /// this warms up once per configured CORS origin too, not just the plain URL.
+    /// </para>
+    /// <para>
     /// Deliberately best-effort: failures are logged, not thrown — a storage hiccup here shouldn't
     /// fail the whole upload (and thus lose the photo) when the object did upload successfully. The
     /// download button's own client-side retry (see the frontend) remains the last line of defense
@@ -79,35 +90,53 @@ public class S3StorageService(
     /// </summary>
     private async Task WarmUpPublicUrlAsync(string url, CancellationToken cancellationToken)
     {
+        // null = plain GET, no Origin header (covers <img> tags, the kiosk, and direct navigation).
+        // Each configured CORS origin gets its own pass too — see the Vary: Origin note above.
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        var variants = new List<string?> { null };
+        variants.AddRange(allowedOrigins.Distinct());
+
+        await Task.WhenAll(variants.Select(origin => WarmUpVariantAsync(url, origin, cancellationToken)));
+    }
+
+    private async Task WarmUpVariantAsync(string url, string? originHeader, CancellationToken cancellationToken)
+    {
         const int maxAttempts = 4;
         var delay = TimeSpan.FromMilliseconds(500);
         var client = httpClientFactory.CreateClient(nameof(S3StorageService));
+        var variantLabel = originHeader ?? "(no Origin header)";
 
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
             {
-                using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                if (originHeader is not null)
+                {
+                    request.Headers.Add("Origin", originHeader);
+                }
+
+                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    logger.LogDebug("Warmed up public URL '{Url}' on attempt {Attempt}", url, attempt);
+                    logger.LogDebug("Warmed up public URL '{Url}' for {Variant} on attempt {Attempt}", url, variantLabel, attempt);
                     return;
                 }
 
                 logger.LogDebug(
-                    "Warm-up GET for '{Url}' returned {StatusCode} on attempt {Attempt}/{MaxAttempts}",
-                    url, (int)response.StatusCode, attempt, maxAttempts);
+                    "Warm-up GET for '{Url}' ({Variant}) returned {StatusCode} on attempt {Attempt}/{MaxAttempts}",
+                    url, variantLabel, (int)response.StatusCode, attempt, maxAttempts);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.LogDebug(ex, "Warm-up GET for '{Url}' failed on attempt {Attempt}/{MaxAttempts}", url, attempt, maxAttempts);
+                logger.LogDebug(ex, "Warm-up GET for '{Url}' ({Variant}) failed on attempt {Attempt}/{MaxAttempts}", url, variantLabel, attempt, maxAttempts);
             }
 
             if (attempt == maxAttempts)
             {
                 logger.LogWarning(
-                    "Public URL '{Url}' still not reachable after {MaxAttempts} warm-up attempts — announcing the photo anyway.",
-                    url, maxAttempts);
+                    "Public URL '{Url}' ({Variant}) still not reachable after {MaxAttempts} warm-up attempts — announcing the photo anyway.",
+                    url, variantLabel, maxAttempts);
                 return;
             }
 

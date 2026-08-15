@@ -94,11 +94,21 @@ export class DownloadShareButtonsComponent {
    * 12s of waiting before giving up), to cover longer edge hiccups without leaving the guest
    * stuck indefinitely — `download()` still falls back to opening the URL directly if every
    * attempt fails.
+   *
+   * `cache: 'reload'` is load-bearing, not an optimization: confirmed live that once a guest's
+   * browser sees *any* 5xx for this URL (e.g. the wall's own `<img>` thumbnail racing the
+   * server-side warm-up on a freshly-captured photo), Chrome caches that error response locally —
+   * our Cache Rule sends `Cache-Control: max-age=...` on the Browser TTL regardless of status code,
+   * so the browser has no reason to distrust it. Every plain `fetch()` after that silently replays
+   * the cached 504 from disk, forever (well, for the TTL), no matter how many times we retry or
+   * what we fix server-side — confirmed by reproducing it and watching retries fail identically
+   * even after the object was long since fetchable again. `reload` forces each attempt past the
+   * browser's own cache and back onto the network.
    */
   private async fetchBlobWithRetry(attempts = 5, baseDelayMs = 1000, maxDelayMs = 5000): Promise<Blob> {
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
-        const response = await fetch(this.url());
+        const response = await fetch(this.url(), { cache: 'reload' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.blob();
       } catch (error) {
