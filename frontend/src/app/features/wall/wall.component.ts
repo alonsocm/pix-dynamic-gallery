@@ -23,8 +23,8 @@ import { WallPhotosService } from './wall-photos.service';
 
       @if (wallPhotos.photos().length > 0) {
         <div class="columns-2 gap-4 sm:columns-3 md:columns-4 lg:columns-5">
-          @for (photo of wallPhotos.photos(); track photo.id) {
-            <app-photo-grid-item [photo]="photo" (select)="openLightbox(photo)" />
+          @for (photo of wallPhotos.photos(); track photo.id; let i = $index) {
+            <app-photo-grid-item [photo]="photo" [index]="i" (select)="openLightbox(photo)" />
           }
         </div>
       } @else if (!wallPhotos.loading()) {
