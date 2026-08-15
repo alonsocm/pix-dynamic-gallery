@@ -28,6 +28,7 @@ const RETRY_DELAY_MS = 2000;
               <img [src]="p.url" [alt]="event().name" class="w-full rounded-photo shadow-2xl shadow-black/50" />
               <h1 class="text-center text-lg font-semibold text-white/90">{{ event().name }}</h1>
               <app-download-share-buttons [url]="p.url!" [title]="event().name" />
+              <img src="brand/pix-wordmark.png" alt="PIX" class="mt-2 h-6 w-auto opacity-50" />
             </div>
           }
           @case (PhotoStatus.Failed) {

@@ -18,6 +18,12 @@ import { WallPhotosService } from './wall-photos.service';
   imports: [PhotoGridItemComponent, PhotoLightboxComponent],
   providers: [WallPhotosService], // route-scoped: a fresh instance (and fresh state) per navigation into this route
   template: `
+    <img
+      src="brand/pix-wordmark.png"
+      alt="PIX"
+      class="pointer-events-none fixed top-4 left-4 z-10 h-7 w-auto opacity-70 sm:h-9"
+    />
+
     <div class="min-h-screen p-4 sm:p-6">
       <h1 class="mb-6 text-center text-2xl font-bold text-white/90">{{ event().name }} — Muro en vivo</h1>
 

@@ -13,8 +13,8 @@ import { Router } from '@angular/router';
   template: `
     <div class="flex min-h-screen flex-col items-center justify-center gap-8 px-6 text-center">
       <div>
-        <h1 class="text-4xl font-bold text-brand-500">📸 Pix Dynamic Gallery</h1>
-        <p class="mt-2 text-white/60">Plataforma en vivo para eventos con photobooth.</p>
+        <img src="brand/pix-logo-full.png" alt="PIX — Cabina Fotográfica" class="mx-auto h-28 w-auto sm:h-32" />
+        <p class="mt-3 text-white/60">Plataforma en vivo para eventos con photobooth.</p>
       </div>
 
       <div class="flex w-full max-w-xs flex-col gap-3">

@@ -19,6 +19,12 @@ const FAILED_NOTICE_TTL_MS = 8000;
   selector: 'app-kiosk',
   imports: [QrCodeComponent],
   template: `
+    <img
+      src="brand/pix-wordmark.png"
+      alt="PIX"
+      class="pointer-events-none fixed top-4 left-4 h-8 w-auto opacity-70 sm:h-10"
+    />
+
     <div class="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
       <h1 class="text-center text-3xl font-bold text-white/90">{{ event().name }}</h1>
 
