@@ -9,7 +9,9 @@
 #   2. Install `cloudflared` and make sure it's on PATH (or edit $CloudflaredPath below).
 #   3. Copy env.production.example to .env.production and fill in the real secrets.
 #
-# Usage: right-click -> "Run with PowerShell", or from a terminal:
+# Usage: double-click start-booth.cmd (recommended - forces the execution policy bypass
+# regardless of what "Run with PowerShell" or the machine's policy would otherwise do),
+# or from a terminal:
 #   powershell -ExecutionPolicy Bypass -File tools\booth\start-booth.ps1
 
 param(

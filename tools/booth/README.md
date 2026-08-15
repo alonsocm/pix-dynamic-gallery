@@ -38,6 +38,7 @@ End state on the cabin PC:
 ```
 tools\booth\
 ├── start-booth.ps1
+├── start-booth.cmd
 ├── env.production.example
 ├── .env.production          <- you create this, step 3
 └── api\
@@ -54,6 +55,11 @@ Cloudflare Tunnel token). `.env.production` is gitignored — it never gets comm
 of what you copy from the dev machine.
 
 ### 4. Run it
+
+Double-click `start-booth.cmd`. It forces `-ExecutionPolicy Bypass`, so it works regardless of
+what "Run with PowerShell" or the machine's configured execution policy would otherwise do (that
+context-menu action only bypasses the policy conditionally, and can silently fail to run the
+script on a cabin PC with a stricter policy). From a terminal, the equivalent is:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\booth\start-booth.ps1
