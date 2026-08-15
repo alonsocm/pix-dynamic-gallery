@@ -84,10 +84,18 @@ export class DownloadShareButtonsComponent {
    * The R2 custom domain serving these photos intermittently 504s on a cold fetch (edge cache
    * miss, origin took too long) — confirmed via the Cloudflare error page's response lacking CORS
    * headers, which surfaces in the browser as a misleading "blocked by CORS policy" even though
-   * the real cause is the gateway timeout, not a CORS misconfig. Since it's transient, a couple of
-   * short-backoff retries clear most of them without the guest having to tap the button again.
+   * the real cause is the gateway timeout, not a CORS misconfig (verified live: the bucket's CORS
+   * policy is correctly configured — `curl` against the same URL returns a proper
+   * `Access-Control-Allow-Origin` header on success). Since it's transient, retrying with backoff
+   * clears most of them without the guest having to tap the button again.
+   *
+   * 3 attempts with a 1s/2s backoff (~3s total) turned out not to be enough — seen in the wild
+   * failing all 3 in a row. Widened to 5 attempts with exponential backoff capped at 5s (~1+2+4+5 =
+   * 12s of waiting before giving up), to cover longer edge hiccups without leaving the guest
+   * stuck indefinitely — `download()` still falls back to opening the URL directly if every
+   * attempt fails.
    */
-  private async fetchBlobWithRetry(attempts = 3, delayMs = 1000): Promise<Blob> {
+  private async fetchBlobWithRetry(attempts = 5, baseDelayMs = 1000, maxDelayMs = 5000): Promise<Blob> {
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
         const response = await fetch(this.url());
@@ -95,7 +103,8 @@ export class DownloadShareButtonsComponent {
         return await response.blob();
       } catch (error) {
         if (attempt === attempts) throw error;
-        await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+        const delayMs = Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
     // Unreachable — the loop above always returns or throws on the last attempt.
