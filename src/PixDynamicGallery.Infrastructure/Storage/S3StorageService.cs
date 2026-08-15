@@ -1,13 +1,18 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using PixDynamicGallery.Application.Common.Interfaces;
 
 namespace PixDynamicGallery.Infrastructure.Storage;
 
 /// <summary>AWS S3 implementation of <see cref="IStorageService"/>, backed by the AWS SDK v3 client.</summary>
-public class S3StorageService(IAmazonS3 s3Client, IOptions<StorageOptions> options, ILogger<S3StorageService> logger)
+public class S3StorageService(
+    IAmazonS3 s3Client,
+    IHttpClientFactory httpClientFactory,
+    IOptions<StorageOptions> options,
+    ILogger<S3StorageService> logger)
     : IStorageService
 {
     private readonly AwsS3Options _options = options.Value.AwsS3;
@@ -50,7 +55,65 @@ public class S3StorageService(IAmazonS3 s3Client, IOptions<StorageOptions> optio
             "Uploaded '{Key}' to S3 bucket '{Bucket}' ({StatusCode})",
             objectKey, _options.BucketName, response.HttpStatusCode);
 
+        await WarmUpPublicUrlAsync(url, cancellationToken);
+
         return new StorageUploadResult(objectKey, url, sizeBytes);
+    }
+
+    /// <summary>
+    /// Fetches the object's public URL right after upload, before the caller announces the photo
+    /// to guests/the kiosk. Confirmed against a real Cloudflare R2 custom domain (<c>img.somospix.com</c>
+    /// fronting this bucket): a brand-new object can 503/504 for several seconds after the
+    /// `PutObject` response already succeeded — R2 propagating the write to the edge lags behind the
+    /// write confirmation. Without this, that window landed on the guest instead: a guest tapping
+    /// "Descargar" within seconds of the photo appearing (their fetch()-based download, which — unlike
+    /// a plain navigation — has no browser retry of its own) could hit that gap and see the download
+    /// fail. Doing the wait here instead hides it inside the upload pipeline, where it overlaps with
+    /// time the guest already spends walking to their phone/scanning the QR.
+    /// <para>
+    /// Deliberately best-effort: failures are logged, not thrown — a storage hiccup here shouldn't
+    /// fail the whole upload (and thus lose the photo) when the object did upload successfully. The
+    /// download button's own client-side retry (see the frontend) remains the last line of defense
+    /// for whatever this doesn't catch.
+    /// </para>
+    /// </summary>
+    private async Task WarmUpPublicUrlAsync(string url, CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 4;
+        var delay = TimeSpan.FromMilliseconds(500);
+        var client = httpClientFactory.CreateClient(nameof(S3StorageService));
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (response.IsSuccessStatusCode)
+                {
+                    logger.LogDebug("Warmed up public URL '{Url}' on attempt {Attempt}", url, attempt);
+                    return;
+                }
+
+                logger.LogDebug(
+                    "Warm-up GET for '{Url}' returned {StatusCode} on attempt {Attempt}/{MaxAttempts}",
+                    url, (int)response.StatusCode, attempt, maxAttempts);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogDebug(ex, "Warm-up GET for '{Url}' failed on attempt {Attempt}/{MaxAttempts}", url, attempt, maxAttempts);
+            }
+
+            if (attempt == maxAttempts)
+            {
+                logger.LogWarning(
+                    "Public URL '{Url}' still not reachable after {MaxAttempts} warm-up attempts — announcing the photo anyway.",
+                    url, maxAttempts);
+                return;
+            }
+
+            await Task.Delay(delay, cancellationToken);
+            delay *= 2;
+        }
     }
 
     public Task DeleteAsync(string objectKey, CancellationToken cancellationToken = default) =>

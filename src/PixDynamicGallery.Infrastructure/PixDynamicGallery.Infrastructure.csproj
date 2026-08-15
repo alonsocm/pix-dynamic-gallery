@@ -19,6 +19,7 @@
     <!-- Cloud storage providers -->
     <PackageReference Include="AWSSDK.S3" Version="3.7.408" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.23.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
 
     <!-- FileSystemWatcher background service host -->
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />

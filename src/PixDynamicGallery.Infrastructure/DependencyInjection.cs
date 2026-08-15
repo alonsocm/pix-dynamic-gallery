@@ -54,6 +54,10 @@ public static class DependencyInjection
 
             case StorageProvider.AwsS3:
             default:
+                // Used by S3StorageService to warm up an object's public URL right after upload —
+                // see the comment on WarmUpPublicUrlAsync for why that's needed against R2.
+                services.AddHttpClient(nameof(S3StorageService), client => client.Timeout = TimeSpan.FromSeconds(10));
+
                 services.AddSingleton<IAmazonS3>(sp =>
                 {
                     var options = sp.GetRequiredService<IOptions<StorageOptions>>().Value.AwsS3;
