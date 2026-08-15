@@ -61,8 +61,7 @@ export class DownloadShareButtonsComponent {
    */
   async download(): Promise<void> {
     try {
-      const response = await fetch(this.url());
-      const blob = await response.blob();
+      const blob = await this.fetchBlobWithRetry();
       const blobUrl = URL.createObjectURL(blob);
 
       const link = document.createElement('a');
@@ -74,10 +73,33 @@ export class DownloadShareButtonsComponent {
 
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
     } catch {
-      // CORS blocked, offline, etc. — fall back to just opening it so the guest can long-press
-      // and save manually instead of the button silently doing nothing.
+      // Still failing after retries (offline, genuine CORS misconfig, origin down) — fall back to
+      // just opening it so the guest can long-press and save manually instead of the button
+      // silently doing nothing.
       window.open(this.url(), '_blank');
     }
+  }
+
+  /**
+   * The R2 custom domain serving these photos intermittently 504s on a cold fetch (edge cache
+   * miss, origin took too long) — confirmed via the Cloudflare error page's response lacking CORS
+   * headers, which surfaces in the browser as a misleading "blocked by CORS policy" even though
+   * the real cause is the gateway timeout, not a CORS misconfig. Since it's transient, a couple of
+   * short-backoff retries clear most of them without the guest having to tap the button again.
+   */
+  private async fetchBlobWithRetry(attempts = 3, delayMs = 1000): Promise<Blob> {
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      try {
+        const response = await fetch(this.url());
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.blob();
+      } catch (error) {
+        if (attempt === attempts) throw error;
+        await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+      }
+    }
+    // Unreachable — the loop above always returns or throws on the last attempt.
+    throw new Error('fetchBlobWithRetry: exhausted attempts');
   }
 
   /**
@@ -103,8 +125,7 @@ export class DownloadShareButtonsComponent {
    */
   async share(): Promise<void> {
     try {
-      const response = await fetch(this.url());
-      const blob = await response.blob();
+      const blob = await this.fetchBlobWithRetry();
       const file = new File([blob], this.suggestedFilename(), { type: blob.type });
 
       if (navigator.canShare?.({ files: [file] })) {
