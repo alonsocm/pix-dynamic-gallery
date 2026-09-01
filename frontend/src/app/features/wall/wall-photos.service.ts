@@ -75,6 +75,9 @@ export class WallPhotosService {
       eventId: notification.eventId,
       fileName: '',
       url: notification.url,
+      // The slim realtime payload has no thumbnail yet (it's generated after this fires) — the
+      // tile just renders the full-size original until the next page load picks up the thumbnail.
+      thumbnailUrl: null,
       contentType: '',
       sizeBytes: 0,
       status: PhotoStatus.Uploaded,

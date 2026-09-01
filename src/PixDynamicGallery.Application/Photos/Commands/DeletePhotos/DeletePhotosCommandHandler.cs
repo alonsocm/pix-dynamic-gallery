@@ -22,29 +22,37 @@ public class DeletePhotosCommandHandler(
 
         foreach (var photo in photos)
         {
-            if (string.IsNullOrEmpty(photo.StorageKey))
-            {
-                continue; // never finished uploading — nothing in storage to clean up
-            }
-
-            try
-            {
-                await storageService.DeleteAsync(photo.StorageKey, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                // Best-effort: a bulk admin delete shouldn't get stuck on one flaky storage call —
-                // this leaves a harmless orphaned object behind (solo-operator tool, not a
-                // billing-critical system) while still letting the operator clear the row.
-                logger.LogWarning(ex,
-                    "Failed to delete storage object {StorageKey} for photo {PhotoId} — deleting the DB row anyway.",
-                    photo.StorageKey, photo.Id);
-            }
+            await DeleteStorageObjectAsync(photo.Id, photo.StorageKey, cancellationToken);
+            await DeleteStorageObjectAsync(photo.Id, photo.ThumbnailStorageKey, cancellationToken);
         }
 
         context.Photos.RemoveRange(photos);
         await context.SaveChangesAsync(cancellationToken);
 
         return new DeletePhotosResult { DeletedCount = photos.Count, NotFoundPhotoIds = notFoundIds };
+    }
+
+    /// <summary>
+    /// Best-effort: a bulk admin delete shouldn't get stuck on one flaky storage call — this leaves
+    /// a harmless orphaned object behind (solo-operator tool, not a billing-critical system) while
+    /// still letting the operator clear the row. Shared by both the original and the thumbnail key.
+    /// </summary>
+    private async Task DeleteStorageObjectAsync(Guid photoId, string? storageKey, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(storageKey))
+        {
+            return; // never finished uploading (or no thumbnail was generated) — nothing to clean up
+        }
+
+        try
+        {
+            await storageService.DeleteAsync(storageKey, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Failed to delete storage object {StorageKey} for photo {PhotoId} — deleting the DB row anyway.",
+                storageKey, photoId);
+        }
     }
 }

@@ -17,6 +17,12 @@ public record PhotoDto
 
     public string? Url { get; init; }
 
+    /// <summary>
+    /// Small static preview JPEG the wall grid should render instead of <see cref="Url"/> when
+    /// present. Null when generation failed or hasn't finished yet — clients fall back to <see cref="Url"/>.
+    /// </summary>
+    public string? ThumbnailUrl { get; init; }
+
     public required string ContentType { get; init; }
 
     public long SizeBytes { get; init; }
@@ -33,6 +39,7 @@ public record PhotoDto
         EventId = photo.EventId,
         FileName = photo.FileName,
         Url = photo.Url,
+        ThumbnailUrl = photo.ThumbnailUrl,
         ContentType = photo.ContentType,
         SizeBytes = photo.SizeBytes,
         Status = photo.Status,

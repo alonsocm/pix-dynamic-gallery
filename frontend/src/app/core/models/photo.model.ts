@@ -12,6 +12,8 @@ export interface PhotoDto {
   eventId: string;
   fileName: string;
   url: string | null;
+  /** Small static preview JPEG; null when generation failed or hasn't finished — fall back to `url`. */
+  thumbnailUrl: string | null;
   contentType: string;
   sizeBytes: number;
   status: PhotoStatus;

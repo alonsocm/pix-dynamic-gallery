@@ -33,7 +33,7 @@ import { PhotoDto } from '../../core/models/photo.model';
       class="block w-full touch-manipulation cursor-pointer rounded-photo text-left transition active:scale-[0.98]"
     >
       @defer (on viewport; prefetch on idle) {
-        <img [src]="photo().url" [alt]="photo().fileName || 'Foto del evento'" loading="lazy" class="w-full rounded-photo" />
+        <img [src]="thumbSrc()" [alt]="photo().fileName || 'Foto del evento'" loading="lazy" class="w-full rounded-photo" />
       } @placeholder {
         <div class="aspect-square w-full animate-pulse rounded-photo bg-white/10"></div>
       } @loading (minimum 100ms) {
@@ -54,6 +54,14 @@ export class PhotoGridItemComponent {
 
   /** Capped so a long initial batch/page doesn't leave the last tiles waiting ages to start. */
   protected readonly delayMs = computed(() => Math.min(this.index() * 40, 480));
+
+  /**
+   * Grid tiles render the small server-generated preview instead of the full-size original —
+   * that's most of the wall's network weight for an event with many photos. Falls back to the
+   * original whenever no thumbnail exists yet (generation failed, or a photo just arrived over
+   * SignalR and hasn't been through a page load yet — see WallPhotosService.prependRealtime).
+   */
+  protected readonly thumbSrc = computed(() => this.photo().thumbnailUrl ?? this.photo().url);
 
   /** A small pseudo-random tilt (-9°..9°) derived from the photo id, so it's the same every time
    *  this exact photo renders instead of jumping around on each change-detection pass. */

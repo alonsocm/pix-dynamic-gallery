@@ -15,6 +15,8 @@ public class PhotoConfiguration : IEntityTypeConfiguration<Photo>
         builder.Property(p => p.LocalFilePath).HasMaxLength(1000).IsRequired();
         builder.Property(p => p.StorageKey).HasMaxLength(1000);
         builder.Property(p => p.Url).HasMaxLength(1000);
+        builder.Property(p => p.ThumbnailStorageKey).HasMaxLength(1000);
+        builder.Property(p => p.ThumbnailUrl).HasMaxLength(1000);
         builder.Property(p => p.ContentType).HasMaxLength(100).IsRequired();
         builder.Property(p => p.FailureReason).HasMaxLength(2000);
 

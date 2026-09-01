@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PixDynamicGallery.Application.Common.Exceptions;
 using PixDynamicGallery.Application.Common.Interfaces;
 using PixDynamicGallery.Application.Photos.Dtos;
+using PixDynamicGallery.Domain.Entities;
 using PixDynamicGallery.Domain.Enums;
 
 namespace PixDynamicGallery.Application.Photos.Commands.UploadCapturedPhoto;
@@ -12,6 +13,7 @@ public class UploadCapturedPhotoCommandHandler(
     IApplicationDbContext context,
     IStorageService storageService,
     ILocalCaptureFileReader fileReader,
+    IImageThumbnailGenerator thumbnailGenerator,
     IPhotoNotifier notifier,
     ILogger<UploadCapturedPhotoCommandHandler> logger)
     : IRequestHandler<UploadCapturedPhotoCommand, PhotoDto>
@@ -65,6 +67,10 @@ public class UploadCapturedPhotoCommandHandler(
 
             photo.MarkAsUploaded(result.ObjectKey, result.Url, result.SizeBytes);
             await context.SaveChangesAsync(cancellationToken);
+
+            // Reuses the same (seekable FileStream) handle rather than reopening the local file —
+            // cheap, and the original upload above already proved the file is readable.
+            await GenerateAndAttachThumbnailAsync(@event.Slug, photo, content, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -85,5 +91,42 @@ public class UploadCapturedPhotoCommandHandler(
             photo.Id, @event.Id, @event.Slug, photo.Url);
 
         return dto;
+    }
+
+    /// <summary>
+    /// Best-effort: the original already uploaded successfully by the time this runs, so a
+    /// thumbnail failure (unsupported/corrupt image, transient storage error, ...) is logged and
+    /// swallowed rather than failing the whole capture — the wall simply falls back to
+    /// <see cref="Domain.Entities.Photo.Url"/> for this one photo (see <see cref="PhotoDto.ThumbnailUrl"/>).
+    /// </summary>
+    private async Task GenerateAndAttachThumbnailAsync(
+        string eventSlug, Photo photo, Stream originalContent, CancellationToken cancellationToken)
+    {
+        if (!thumbnailGenerator.CanGenerate(photo.ContentType) || !originalContent.CanSeek)
+        {
+            return;
+        }
+
+        try
+        {
+            originalContent.Position = 0;
+            await using var thumbnailContent = await thumbnailGenerator.GenerateAsync(originalContent, cancellationToken);
+            if (thumbnailContent is null)
+            {
+                return;
+            }
+
+            var thumbnailKey = $"{eventSlug}/{photo.Id}-thumb.jpg";
+            var thumbnailResult = await storageService.UploadAsync(thumbnailContent, thumbnailKey, "image/jpeg", cancellationToken);
+
+            photo.AttachThumbnail(thumbnailResult.ObjectKey, thumbnailResult.Url);
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Failed to generate/upload thumbnail for photo {PhotoId} — the wall will fall back to the full-size original.",
+                photo.Id);
+        }
     }
 }

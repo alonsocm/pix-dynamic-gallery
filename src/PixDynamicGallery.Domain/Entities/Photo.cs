@@ -26,6 +26,17 @@ public class Photo : BaseEntity
     /// <summary>Public (or pre-signed) URL guests and the kiosk use to display/download the photo.</summary>
     public string? Url { get; private set; }
 
+    /// <summary>Object key of the resized preview JPEG (see <see cref="Url"/>'s counterpart below). Null until <see cref="AttachThumbnail"/> runs.</summary>
+    public string? ThumbnailStorageKey { get; private set; }
+
+    /// <summary>
+    /// URL of a small static JPEG preview, generated best-effort right after upload. The guest live
+    /// wall renders this instead of <see cref="Url"/> so tiles don't each pull down the full-size
+    /// original (or, for animated GIFs, the whole animation) — null whenever generation failed or
+    /// hasn't run yet, in which case callers fall back to <see cref="Url"/>.
+    /// </summary>
+    public string? ThumbnailUrl { get; private set; }
+
     public string ContentType { get; private set; } = "image/jpeg";
 
     public long SizeBytes { get; private set; }
@@ -82,6 +93,18 @@ public class Photo : BaseEntity
         Status = PhotoStatus.Uploaded;
         UploadedAtUtc = DateTimeOffset.UtcNow;
         FailureReason = null;
+    }
+
+    /// <summary>
+    /// Records a successfully generated/uploaded thumbnail. Separate from <see cref="MarkAsUploaded"/>
+    /// because thumbnail generation is a best-effort step that runs after (and must not block or
+    /// undo) the original upload succeeding — a photo can legitimately stay <see cref="PhotoStatus.Uploaded"/>
+    /// with no thumbnail if generation failed.
+    /// </summary>
+    public void AttachThumbnail(string storageKey, string url)
+    {
+        ThumbnailStorageKey = storageKey;
+        ThumbnailUrl = url;
     }
 
     public void MarkAsFailed(string reason)
