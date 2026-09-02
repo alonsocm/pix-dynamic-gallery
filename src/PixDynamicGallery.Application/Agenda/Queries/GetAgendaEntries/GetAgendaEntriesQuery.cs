@@ -42,6 +42,15 @@ public class GetAgendaEntriesQueryHandler(IApplicationDbContext context)
             .OrderBy(a => a.EventDate)
             .ToListAsync(cancellationToken);
 
-        return entries.Select(AgendaEntryDto.FromEntity).ToList();
+        var entryIds = entries.Select(e => e.Id).ToList();
+        var depositsByEntry = (await context.AgendaDeposits
+                .Where(d => entryIds.Contains(d.AgendaEntryId))
+                .ToListAsync(cancellationToken))
+            .GroupBy(d => d.AgendaEntryId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyCollection<Domain.Entities.AgendaDeposit>)g.OrderByDescending(d => d.PaymentDate).ToList());
+
+        return entries
+            .Select(e => AgendaEntryDto.FromEntity(e, depositsByEntry.GetValueOrDefault(e.Id, [])))
+            .ToList();
     }
 }

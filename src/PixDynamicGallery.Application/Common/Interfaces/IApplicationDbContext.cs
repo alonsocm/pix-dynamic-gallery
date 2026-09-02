@@ -16,6 +16,8 @@ public interface IApplicationDbContext
 
     DbSet<AgendaEntry> AgendaEntries { get; }
 
+    DbSet<AgendaDeposit> AgendaDeposits { get; }
+
     DbSet<EventTransaction> EventTransactions { get; }
 
     DbSet<PaperPurchase> PaperPurchases { get; }

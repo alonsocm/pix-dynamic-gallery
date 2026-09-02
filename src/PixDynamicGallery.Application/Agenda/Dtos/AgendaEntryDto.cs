@@ -29,7 +29,12 @@ public record AgendaEntryDto
 
     public required DateTimeOffset CreatedAtUtc { get; init; }
 
-    public static AgendaEntryDto FromEntity(AgendaEntry entry) => new()
+    /// <summary>Deposits/advance payments logged before there's an Event to attach an EventTransaction to — see AgendaDeposit.</summary>
+    public required List<AgendaDepositDto> Deposits { get; init; }
+
+    public required decimal TotalDeposited { get; init; }
+
+    public static AgendaEntryDto FromEntity(AgendaEntry entry, IReadOnlyCollection<AgendaDeposit> deposits) => new()
     {
         Id = entry.Id,
         ClientName = entry.ClientName,
@@ -43,5 +48,7 @@ public record AgendaEntryDto
         Status = entry.Status,
         LinkedEventId = entry.LinkedEventId,
         CreatedAtUtc = entry.CreatedAtUtc,
+        Deposits = deposits.Select(AgendaDepositDto.FromEntity).ToList(),
+        TotalDeposited = deposits.Sum(d => d.Amount),
     };
 }

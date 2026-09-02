@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiClient } from '../../core/api/api-client.service';
-import { AGENDA_STATUS_LABELS, AGENDA_STATUSES, AgendaEntryDto, AgendaStatus } from '../../core/models/agenda.model';
+import { AGENDA_STATUS_LABELS, AGENDA_STATUSES, AgendaDepositDto, AgendaEntryDto, AgendaStatus } from '../../core/models/agenda.model';
 import { AdminEventDto } from '../../core/models/event.model';
 
 interface AgendaFormControls {
@@ -157,6 +157,80 @@ function emptyForm(): FormGroup<AgendaFormControls> {
                 <p class="mt-1 text-xs text-brand-500">🔗 Vinculado a un evento técnico</p>
               }
 
+              <!-- Anticipos / depósitos -->
+              <div class="mt-3 rounded-lg bg-black/20 p-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold text-white/70">💵 Anticipos</span>
+                  <span class="text-xs text-white/50">Total: {{ formatMoney(entry.totalDeposited) }}</span>
+                </div>
+
+                @if (entry.deposits.length > 0) {
+                  <ul class="mt-2 flex flex-col gap-1 text-xs text-white/60">
+                    @for (dep of entry.deposits; track dep.id) {
+                      <li class="flex items-center justify-between gap-2">
+                        <span>
+                          {{ formatDate(dep.paymentDate) }} — {{ formatMoney(dep.amount) }}
+                          @if (dep.notes) { · {{ dep.notes }} }
+                          @if (dep.transferredTransactionId) {
+                            <span class="text-brand-500">(ya es ingreso del evento)</span>
+                          }
+                        </span>
+                        @if (!dep.transferredTransactionId) {
+                          <button type="button" (click)="removeDeposit(entry, dep)" class="text-white/30 hover:text-red-300">🗑️</button>
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+
+                @if (addingDepositFor() === entry.id) {
+                  <div class="mt-2 flex flex-wrap items-end gap-2">
+                    <label class="flex flex-col gap-1">
+                      <span class="text-[10px] text-white/50">Monto</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        [value]="depositAmount()"
+                        (input)="depositAmount.set($any($event.target).value)"
+                        class="w-24 rounded-lg bg-white/10 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                    </label>
+                    <label class="flex flex-col gap-1">
+                      <span class="text-[10px] text-white/50">Fecha</span>
+                      <input
+                        type="date"
+                        [value]="depositDate()"
+                        (input)="depositDate.set($any($event.target).value)"
+                        class="rounded-lg bg-white/10 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                    </label>
+                    <label class="flex flex-1 flex-col gap-1">
+                      <span class="text-[10px] text-white/50">Nota</span>
+                      <input
+                        [value]="depositNotes()"
+                        (input)="depositNotes.set($any($event.target).value)"
+                        placeholder="Efectivo, transferencia…"
+                        class="rounded-lg bg-white/10 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      [disabled]="!depositAmount() || savingDeposit()"
+                      (click)="submitDeposit(entry)"
+                      class="rounded-full bg-brand-500 px-3 py-1 text-xs font-semibold text-white disabled:opacity-30"
+                    >
+                      Guardar
+                    </button>
+                    <button type="button" (click)="addingDepositFor.set(null)" class="text-xs text-white/40">Cancelar</button>
+                  </div>
+                } @else {
+                  <button type="button" (click)="startAddDeposit(entry)" class="mt-2 text-xs font-semibold text-brand-500">
+                    + Registrar anticipo
+                  </button>
+                }
+              </div>
+
               <div class="mt-3 flex flex-wrap gap-2">
                 @for (status of statuses; track status) {
                   @if (status !== entry.status) {
@@ -205,6 +279,12 @@ export class AgendaListComponent implements OnInit {
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected form = emptyForm();
+
+  protected readonly addingDepositFor = signal<string | null>(null);
+  protected readonly depositAmount = signal('');
+  protected readonly depositDate = signal(new Date().toISOString().slice(0, 10));
+  protected readonly depositNotes = signal('');
+  protected readonly savingDeposit = signal(false);
 
   private events: AdminEventDto[] = [];
 
@@ -319,6 +399,45 @@ export class AgendaListComponent implements OnInit {
     }
     this.api.deleteAgendaEntry(entry.id).subscribe({
       next: () => this.entries.update((list) => list.filter((e) => e.id !== entry.id)),
+    });
+  }
+
+  protected startAddDeposit(entry: AgendaEntryDto): void {
+    this.addingDepositFor.set(entry.id);
+    this.depositAmount.set('');
+    this.depositDate.set(new Date().toISOString().slice(0, 10));
+    this.depositNotes.set('');
+  }
+
+  protected submitDeposit(entry: AgendaEntryDto): void {
+    const amount = Number(this.depositAmount());
+    if (!amount || amount <= 0) {
+      return;
+    }
+
+    this.savingDeposit.set(true);
+    this.api
+      .addAgendaDeposit(entry.id, {
+        amount,
+        paymentDate: new Date(this.depositDate()).toISOString(),
+        notes: this.depositNotes() || null,
+      })
+      .subscribe({
+        next: () => {
+          this.savingDeposit.set(false);
+          this.addingDepositFor.set(null);
+          this.reload();
+        },
+        error: () => this.savingDeposit.set(false),
+      });
+  }
+
+  protected removeDeposit(entry: AgendaEntryDto, deposit: AgendaDepositDto): void {
+    if (!window.confirm('¿Borrar este anticipo?')) {
+      return;
+    }
+    this.api.deleteAgendaDeposit(entry.id, deposit.id).subscribe({
+      next: () => this.reload(),
     });
   }
 

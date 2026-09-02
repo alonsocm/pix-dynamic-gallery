@@ -23,6 +23,6 @@ public class CreateAgendaEntryCommandHandler(IApplicationDbContext context)
         context.AgendaEntries.Add(entry);
         await context.SaveChangesAsync(cancellationToken);
 
-        return AgendaEntryDto.FromEntity(entry);
+        return AgendaEntryDto.FromEntity(entry, deposits: []);
     }
 }

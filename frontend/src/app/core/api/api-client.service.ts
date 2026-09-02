@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AdminAuthService } from '../admin/admin-auth.service';
 import { AppConfigService } from '../config/app-config.service';
-import { AgendaEntryDto, AgendaEntryRequest, AgendaStatus } from '../models/agenda.model';
+import { AgendaDepositDto, AgendaDepositRequest, AgendaEntryDto, AgendaEntryRequest, AgendaStatus } from '../models/agenda.model';
 import { AdminEventDto, CreateEventRequest, EventDto } from '../models/event.model';
 import {
   EventFinanceSummaryDto,
@@ -109,6 +109,23 @@ export class ApiClient {
 
   deleteAgendaEntry(id: string): Observable<void> {
     return this.http.delete<void>(`${this.config.apiBaseUrl}/api/agenda/${id}`, { headers: this.adminHeaders() });
+  }
+
+  /** Logs a deposit/advance payment for a booking — booked as income immediately if it's already linked to an Event. */
+  addAgendaDeposit(agendaEntryId: string, request: AgendaDepositRequest): Observable<AgendaDepositDto> {
+    return this.http.post<AgendaDepositDto>(
+      `${this.config.apiBaseUrl}/api/agenda/${agendaEntryId}/deposits`,
+      request,
+      { headers: this.adminHeaders() },
+    );
+  }
+
+  /** Refused (400) once the deposit has been converted into an event income transaction. */
+  deleteAgendaDeposit(agendaEntryId: string, depositId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.config.apiBaseUrl}/api/agenda/${agendaEntryId}/deposits/${depositId}`,
+      { headers: this.adminHeaders() },
+    );
   }
 
   // ---- Event finance (api/events/{eventId}/transactions) — all admin-only ----

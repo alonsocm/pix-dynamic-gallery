@@ -20,6 +20,24 @@ export const AGENDA_STATUS_LABELS: Record<AgendaStatus, string> = {
   [AgendaStatus.Cancelled]: 'Cancelado',
 };
 
+/** Mirrors PixDynamicGallery.Application.Agenda.Dtos.AgendaDepositDto. */
+export interface AgendaDepositDto {
+  id: string;
+  agendaEntryId: string;
+  amount: number;
+  paymentDate: string;
+  notes: string | null;
+  /** Non-null once converted into an income EventTransaction on the linked Event. */
+  transferredTransactionId: string | null;
+}
+
+/** Mirrors AgendaController's AddAgendaDepositRequest request body. */
+export interface AgendaDepositRequest {
+  amount: number;
+  paymentDate: string;
+  notes?: string | null;
+}
+
 /** Mirrors PixDynamicGallery.Application.Agenda.Dtos.AgendaEntryDto. */
 export interface AgendaEntryDto {
   id: string;
@@ -34,6 +52,8 @@ export interface AgendaEntryDto {
   status: AgendaStatus;
   linkedEventId: string | null;
   createdAtUtc: string;
+  deposits: AgendaDepositDto[];
+  totalDeposited: number;
 }
 
 /** Mirrors AgendaController's CreateAgendaEntryCommand/UpdateAgendaEntryRequest request body. */

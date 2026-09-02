@@ -17,6 +17,11 @@ public class SetAgendaStatusCommandHandler(IApplicationDbContext context)
         entry.SetStatus(request.Status);
         await context.SaveChangesAsync(cancellationToken);
 
-        return AgendaEntryDto.FromEntity(entry);
+        var deposits = await context.AgendaDeposits
+            .Where(d => d.AgendaEntryId == entry.Id)
+            .OrderByDescending(d => d.PaymentDate)
+            .ToListAsync(cancellationToken);
+
+        return AgendaEntryDto.FromEntity(entry, deposits);
     }
 }

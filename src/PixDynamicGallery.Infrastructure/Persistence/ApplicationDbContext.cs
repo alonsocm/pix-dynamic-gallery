@@ -13,6 +13,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public DbSet<AgendaEntry> AgendaEntries => Set<AgendaEntry>();
 
+    public DbSet<AgendaDeposit> AgendaDeposits => Set<AgendaDeposit>();
+
     public DbSet<EventTransaction> EventTransactions => Set<EventTransaction>();
 
     public DbSet<PaperPurchase> PaperPurchases => Set<PaperPurchase>();
