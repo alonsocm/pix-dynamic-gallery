@@ -1,9 +1,9 @@
 using MediatR;
 using PixDynamicGallery.Application.Common.Interfaces;
-using PixDynamicGallery.Application.Finance.Dtos;
+using PixDynamicGallery.Application.Inventory.Dtos;
 using PixDynamicGallery.Domain.Entities;
 
-namespace PixDynamicGallery.Application.Finance.Commands.AddPaperPurchase;
+namespace PixDynamicGallery.Application.Inventory.Commands.AddPaperPurchase;
 
 public class AddPaperPurchaseCommandHandler(IApplicationDbContext context)
     : IRequestHandler<AddPaperPurchaseCommand, PaperPurchaseDto>

@@ -1,4 +1,4 @@
-namespace PixDynamicGallery.Application.Finance.Dtos;
+namespace PixDynamicGallery.Application.Inventory.Dtos;
 
 /// <summary>Paper/ink inventory: purchases minus sheets consumed by Photos-category event expenses.</summary>
 public record PaperStockDto

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PixDynamicGallery.Application.Common.Exceptions;
 using PixDynamicGallery.Application.Common.Interfaces;
 
-namespace PixDynamicGallery.Application.Finance.Commands.DeletePaperPurchase;
+namespace PixDynamicGallery.Application.Inventory.Commands.DeletePaperPurchase;
 
 public class DeletePaperPurchaseCommandHandler(IApplicationDbContext context) : IRequestHandler<DeletePaperPurchaseCommand>
 {

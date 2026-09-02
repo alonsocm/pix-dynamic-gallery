@@ -2,7 +2,14 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiClient } from '../../core/api/api-client.service';
-import { EXPENSE_CATEGORIES, FINANCE_CATEGORY_LABELS, FinanceCategory, FinanceDashboardDto } from '../../core/models/finance.model';
+import {
+  EXPENSE_CATEGORIES,
+  FINANCE_CATEGORY_LABELS,
+  FinanceCategory,
+  FinanceDashboardDto,
+  MonthlyAmountDto,
+  MonthlyCountDto,
+} from '../../core/models/finance.model';
 
 interface GlobalExpenseFormControls {
   expenseDate: FormControl<string>;
@@ -11,25 +18,13 @@ interface GlobalExpenseFormControls {
   amount: FormControl<string>;
 }
 
-interface PaperPurchaseFormControls {
-  purchaseDate: FormControl<string>;
-  sheetsCount: FormControl<string>;
-  totalCost: FormControl<string>;
-  notes: FormControl<string>;
-}
-
-interface UsbPurchaseFormControls {
-  purchaseDate: FormControl<string>;
-  unitsCount: FormControl<string>;
-  totalCost: FormControl<string>;
-  notes: FormControl<string>;
-}
-
 function todayLocalDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** `/admin/finance` — studio-wide profit/loss dashboard: totals, per-event breakdown, paper stock, global expenses, settings. */
+const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+/** `/admin/finance` — balance and reports only (totals, per-event breakdown, monthly income/events, agenda deposits, global expenses, settings). Stock/inventory lives in /admin/inventory instead. */
 @Component({
   selector: 'app-finance-dashboard',
   imports: [ReactiveFormsModule, RouterLink],
@@ -37,9 +32,10 @@ function todayLocalDate(): string {
     <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div class="mb-6 flex items-center justify-between gap-4">
         <h1 class="text-2xl font-bold">Finanzas</h1>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <a routerLink="/admin/events" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 🎪 Eventos </a>
           <a routerLink="/admin/agenda" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📅 Agenda </a>
+          <a routerLink="/admin/inventory" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📦 Inventario </a>
         </div>
       </div>
 
@@ -67,6 +63,48 @@ function todayLocalDate(): string {
           </div>
         </div>
 
+        <!-- Reportes: ingresos por mes / eventos por mes -->
+        <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <section class="rounded-lg bg-white/10 p-4">
+            <h2 class="font-semibold">📈 Ingresos por mes</h2>
+            @if (d.incomeByMonth.length === 0) {
+              <p class="mt-2 text-sm text-white/40">Todavía no hay ingresos registrados.</p>
+            } @else {
+              <ul class="mt-3 flex flex-col gap-2">
+                @for (m of d.incomeByMonth; track m.year + '-' + m.month) {
+                  <li class="flex items-center gap-2">
+                    <span class="w-14 shrink-0 text-xs text-white/50">{{ monthLabel(m.year, m.month) }}</span>
+                    <span class="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                      <span class="block h-full rounded-full bg-emerald-400" [style.width.%]="barWidth(m.total, maxIncome(d))"></span>
+                    </span>
+                    <span class="w-20 shrink-0 text-right text-xs font-semibold text-white/80">{{ formatMoney(m.total) }}</span>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+
+          <section class="rounded-lg bg-white/10 p-4">
+            <h2 class="font-semibold">📅 Eventos por mes</h2>
+            <p class="mt-1 text-xs text-white/40">Reservas de agenda no canceladas, por fecha del evento.</p>
+            @if (d.eventsByMonth.length === 0) {
+              <p class="mt-2 text-sm text-white/40">Todavía no hay eventos agendados.</p>
+            } @else {
+              <ul class="mt-3 flex flex-col gap-2">
+                @for (m of d.eventsByMonth; track m.year + '-' + m.month) {
+                  <li class="flex items-center gap-2">
+                    <span class="w-14 shrink-0 text-xs text-white/50">{{ monthLabel(m.year, m.month) }}</span>
+                    <span class="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                      <span class="block h-full rounded-full bg-brand-500" [style.width.%]="barWidth(m.count, maxEvents(d))"></span>
+                    </span>
+                    <span class="w-8 shrink-0 text-right text-xs font-semibold text-white/80">{{ m.count }}</span>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        </div>
+
         <!-- Anticipos de agenda pendientes de evento -->
         @if (d.agendaDeposits.length > 0) {
           <section class="mb-6 rounded-lg bg-white/10 p-4">
@@ -86,92 +124,6 @@ function todayLocalDate(): string {
             </ul>
           </section>
         }
-
-        <!-- Stock de papel -->
-        <section class="mb-6 rounded-lg bg-white/10 p-4">
-          <h2 class="font-semibold">🧻 Stock de papel/tinta</h2>
-          <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <p class="text-sm text-white/70">Hojas restantes: <strong class="text-white">{{ d.paperStock.remainingSheets }}</strong></p>
-            <p class="text-sm text-white/70">Compradas: <strong class="text-white">{{ d.paperStock.totalPurchasedSheets }}</strong></p>
-            <p class="text-sm text-white/70">Costo/foto sugerido: <strong class="text-white">{{ formatMoney(d.paperStock.suggestedCostPerPhoto) }}</strong></p>
-          </div>
-
-          @if (d.paperStock.purchases.length > 0) {
-            <ul class="mt-3 flex flex-col gap-1 text-xs text-white/50">
-              @for (p of d.paperStock.purchases; track p.id) {
-                <li class="flex items-center justify-between gap-2">
-                  <span>{{ formatDate(p.purchaseDate) }} — {{ p.sheetsCount }} hojas por {{ formatMoney(p.totalCost) }} ({{ formatMoney(p.costPerSheet) }}/hoja) @if (p.notes) { · {{ p.notes }} }</span>
-                  <button type="button" (click)="removePaperPurchase(p.id)" class="shrink-0 text-white/40 hover:text-red-300">🗑️</button>
-                </li>
-              }
-            </ul>
-          }
-
-          <form [formGroup]="paperForm" (ngSubmit)="submitPaperPurchase()" class="mt-3 flex flex-wrap items-end gap-2">
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-white/50">Fecha</span>
-              <input type="date" formControlName="purchaseDate" class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-white/50">Hojas (kit RP-108 = 108)</span>
-              <input type="number" min="1" formControlName="sheetsCount" class="w-28 rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-white/50">Costo total</span>
-              <input type="number" min="0" step="0.01" formControlName="totalCost" class="w-28 rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
-            <label class="flex flex-1 flex-col gap-1">
-              <span class="text-xs text-white/50">Notas</span>
-              <input formControlName="notes" placeholder="Mercado Libre, promoción, etc." class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
-            <button type="submit" [disabled]="paperForm.invalid || savingPaper()" class="rounded-full bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
-              + Compra
-            </button>
-          </form>
-        </section>
-
-        <!-- Stock de USBs -->
-        <section class="mb-6 rounded-lg bg-white/10 p-4">
-          <h2 class="font-semibold">🔌 Stock de USBs</h2>
-          <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <p class="text-sm text-white/70">Unidades restantes: <strong class="text-white">{{ d.usbStock.remainingUnits }}</strong></p>
-            <p class="text-sm text-white/70">Compradas: <strong class="text-white">{{ d.usbStock.totalPurchasedUnits }}</strong></p>
-            <p class="text-sm text-white/70">Costo/USB sugerido: <strong class="text-white">{{ formatMoney(d.usbStock.suggestedCostPerUsb) }}</strong></p>
-          </div>
-
-          @if (d.usbStock.purchases.length > 0) {
-            <ul class="mt-3 flex flex-col gap-1 text-xs text-white/50">
-              @for (p of d.usbStock.purchases; track p.id) {
-                <li class="flex items-center justify-between gap-2">
-                  <span>{{ formatDate(p.purchaseDate) }} — {{ p.unitsCount }} USB por {{ formatMoney(p.totalCost) }} ({{ formatMoney(p.costPerUnit) }}/u) @if (p.notes) { · {{ p.notes }} }</span>
-                  <button type="button" (click)="removeUsbPurchase(p.id)" class="shrink-0 text-white/40 hover:text-red-300">🗑️</button>
-                </li>
-              }
-            </ul>
-          }
-
-          <form [formGroup]="usbForm" (ngSubmit)="submitUsbPurchase()" class="mt-3 flex flex-wrap items-end gap-2">
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-white/50">Fecha</span>
-              <input type="date" formControlName="purchaseDate" class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-white/50">Unidades</span>
-              <input type="number" min="1" formControlName="unitsCount" class="w-24 rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-white/50">Costo total</span>
-              <input type="number" min="0" step="0.01" formControlName="totalCost" class="w-28 rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
-            <label class="flex flex-1 flex-col gap-1">
-              <span class="text-xs text-white/50">Notas</span>
-              <input formControlName="notes" placeholder="Mercado Libre, proveedor, etc." class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
-            <button type="submit" [disabled]="usbForm.invalid || savingUsb()" class="rounded-full bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
-              + Compra
-            </button>
-          </form>
-        </section>
 
         <!-- Costo por km -->
         <section class="mb-6 rounded-lg bg-white/10 p-4">
@@ -270,23 +222,7 @@ export class FinanceDashboardComponent implements OnInit {
   protected readonly dashboard = signal<FinanceDashboardDto | null>(null);
   protected readonly globalExpenses = signal<{ id: string; expenseDate: string; category: FinanceCategory; description: string; amount: number }[]>([]);
   protected readonly costPerKmInput = signal('0');
-  protected readonly savingPaper = signal(false);
-  protected readonly savingUsb = signal(false);
   protected readonly savingExpense = signal(false);
-
-  protected readonly paperForm = new FormGroup<PaperPurchaseFormControls>({
-    purchaseDate: new FormControl(todayLocalDate(), { nonNullable: true, validators: [Validators.required] }),
-    sheetsCount: new FormControl('108', { nonNullable: true, validators: [Validators.required, Validators.min(1)] }),
-    totalCost: new FormControl('800', { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
-    notes: new FormControl('', { nonNullable: true }),
-  });
-
-  protected readonly usbForm = new FormGroup<UsbPurchaseFormControls>({
-    purchaseDate: new FormControl(todayLocalDate(), { nonNullable: true, validators: [Validators.required] }),
-    unitsCount: new FormControl('1', { nonNullable: true, validators: [Validators.required, Validators.min(1)] }),
-    totalCost: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
-    notes: new FormControl('', { nonNullable: true }),
-  });
 
   protected readonly expenseForm = new FormGroup<GlobalExpenseFormControls>({
     expenseDate: new FormControl(todayLocalDate(), { nonNullable: true, validators: [Validators.required] }),
@@ -313,59 +249,20 @@ export class FinanceDashboardComponent implements OnInit {
     return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  protected submitPaperPurchase(): void {
-    if (this.paperForm.invalid) {
-      return;
-    }
-    const raw = this.paperForm.getRawValue();
-    this.savingPaper.set(true);
-    this.api
-      .addPaperPurchase({
-        purchaseDate: new Date(raw.purchaseDate).toISOString(),
-        sheetsCount: Number(raw.sheetsCount),
-        totalCost: Number(raw.totalCost),
-        notes: raw.notes || null,
-      })
-      .subscribe({
-        next: () => {
-          this.savingPaper.set(false);
-          this.paperForm.patchValue({ notes: '' });
-          this.reload();
-        },
-        error: () => this.savingPaper.set(false),
-      });
+  protected monthLabel(year: number, month: number): string {
+    return `${MONTH_LABELS[month - 1]} ${year}`;
   }
 
-  protected submitUsbPurchase(): void {
-    if (this.usbForm.invalid) {
-      return;
-    }
-    const raw = this.usbForm.getRawValue();
-    this.savingUsb.set(true);
-    this.api
-      .addUsbPurchase({
-        purchaseDate: new Date(raw.purchaseDate).toISOString(),
-        unitsCount: Number(raw.unitsCount),
-        totalCost: Number(raw.totalCost),
-        notes: raw.notes || null,
-      })
-      .subscribe({
-        next: () => {
-          this.savingUsb.set(false);
-          this.usbForm.patchValue({ notes: '' });
-          this.reload();
-        },
-        error: () => this.savingUsb.set(false),
-      });
+  protected maxIncome(d: FinanceDashboardDto): number {
+    return Math.max(1, ...d.incomeByMonth.map((m: MonthlyAmountDto) => m.total));
   }
 
-  protected removeUsbPurchase(id: string): void {
-    if (!window.confirm('¿Borrar esta compra de USBs?')) {
-      return;
-    }
-    this.api.deleteUsbPurchase(id).subscribe({
-      next: () => this.reload(),
-    });
+  protected maxEvents(d: FinanceDashboardDto): number {
+    return Math.max(1, ...d.eventsByMonth.map((m: MonthlyCountDto) => m.count));
+  }
+
+  protected barWidth(value: number, max: number): number {
+    return max === 0 ? 0 : Math.max(2, Math.round((value / max) * 100));
   }
 
   protected saveCostPerKm(): void {
@@ -398,15 +295,6 @@ export class FinanceDashboardComponent implements OnInit {
         },
         error: () => this.savingExpense.set(false),
       });
-  }
-
-  protected removePaperPurchase(id: string): void {
-    if (!window.confirm('¿Borrar esta compra de papel?')) {
-      return;
-    }
-    this.api.deletePaperPurchase(id).subscribe({
-      next: () => this.reload(),
-    });
   }
 
   protected removeGlobalExpense(id: string): void {

@@ -1,7 +1,7 @@
 using MediatR;
-using PixDynamicGallery.Application.Finance.Dtos;
+using PixDynamicGallery.Application.Inventory.Dtos;
 
-namespace PixDynamicGallery.Application.Finance.Commands.AddPaperPurchase;
+namespace PixDynamicGallery.Application.Inventory.Commands.AddPaperPurchase;
 
 public record AddPaperPurchaseCommand : IRequest<PaperPurchaseDto>
 {

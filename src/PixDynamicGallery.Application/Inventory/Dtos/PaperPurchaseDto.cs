@@ -1,6 +1,6 @@
 using PixDynamicGallery.Domain.Entities;
 
-namespace PixDynamicGallery.Application.Finance.Dtos;
+namespace PixDynamicGallery.Application.Inventory.Dtos;
 
 public record PaperPurchaseDto
 {

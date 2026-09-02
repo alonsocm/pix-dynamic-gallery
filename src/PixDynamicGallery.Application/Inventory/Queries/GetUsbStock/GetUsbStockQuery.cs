@@ -1,9 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PixDynamicGallery.Application.Common.Interfaces;
-using PixDynamicGallery.Application.Finance.Dtos;
+using PixDynamicGallery.Application.Inventory.Dtos;
 
-namespace PixDynamicGallery.Application.Finance.Queries.GetUsbStock;
+namespace PixDynamicGallery.Application.Inventory.Queries.GetUsbStock;
 
 /// <summary>Admin-only: USB drive inventory (purchases, remaining units, suggested cost/USB) — powers the /admin/finance stock card.</summary>
 public record GetUsbStockQuery : IRequest<UsbStockDto>;

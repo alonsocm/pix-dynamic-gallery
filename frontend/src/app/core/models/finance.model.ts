@@ -72,44 +72,6 @@ export interface EventFinanceSummaryDto {
   suggestedCostPerUsb: number;
 }
 
-/** Mirrors PixDynamicGallery.Application.Finance.Dtos.PaperPurchaseDto. */
-export interface PaperPurchaseDto {
-  id: string;
-  purchaseDate: string;
-  sheetsCount: number;
-  totalCost: number;
-  costPerSheet: number;
-  notes: string | null;
-}
-
-/** Mirrors PixDynamicGallery.Application.Finance.Dtos.PaperStockDto. */
-export interface PaperStockDto {
-  purchases: PaperPurchaseDto[];
-  totalPurchasedSheets: number;
-  totalConsumedSheets: number;
-  remainingSheets: number;
-  suggestedCostPerPhoto: number;
-}
-
-/** Mirrors PixDynamicGallery.Application.Finance.Dtos.UsbPurchaseDto. */
-export interface UsbPurchaseDto {
-  id: string;
-  purchaseDate: string;
-  unitsCount: number;
-  totalCost: number;
-  costPerUnit: number;
-  notes: string | null;
-}
-
-/** Mirrors PixDynamicGallery.Application.Finance.Dtos.UsbStockDto. */
-export interface UsbStockDto {
-  purchases: UsbPurchaseDto[];
-  totalPurchasedUnits: number;
-  totalConsumedUnits: number;
-  remainingUnits: number;
-  suggestedCostPerUsb: number;
-}
-
 /** Mirrors PixDynamicGallery.Application.Finance.Dtos.GlobalExpenseDto. */
 export interface GlobalExpenseDto {
   id: string;
@@ -130,11 +92,25 @@ export interface FinanceDashboardDto {
   totalRealExpenses: number;
   netProfit: number;
   perEventBreakdown: PerEventBreakdownDto[];
-  paperStock: PaperStockDto;
-  usbStock: UsbStockDto;
   /** Sum of every agenda deposit not yet transferred to an event — already folded into totalIncome, broken out here for visibility. */
   pendingDepositsTotal: number;
   agendaDeposits: PendingAgendaDepositDto[];
+  incomeByMonth: MonthlyAmountDto[];
+  eventsByMonth: MonthlyCountDto[];
+}
+
+/** Mirrors PixDynamicGallery.Application.Finance.Dtos.MonthlyAmountDto. */
+export interface MonthlyAmountDto {
+  year: number;
+  month: number;
+  total: number;
+}
+
+/** Mirrors PixDynamicGallery.Application.Finance.Dtos.MonthlyCountDto. */
+export interface MonthlyCountDto {
+  year: number;
+  month: number;
+  count: number;
 }
 
 /** Mirrors PixDynamicGallery.Application.Finance.Dtos.PendingAgendaDepositDto. */

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PixDynamicGallery.Application.Common.Exceptions;
 using PixDynamicGallery.Application.Common.Interfaces;
 using PixDynamicGallery.Application.Finance.Dtos;
+using PixDynamicGallery.Application.Inventory;
 using PixDynamicGallery.Domain.Entities;
 using PixDynamicGallery.Domain.Enums;
 

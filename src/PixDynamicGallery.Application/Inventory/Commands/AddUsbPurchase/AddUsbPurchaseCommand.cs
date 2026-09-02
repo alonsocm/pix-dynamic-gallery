@@ -1,7 +1,7 @@
 using MediatR;
-using PixDynamicGallery.Application.Finance.Dtos;
+using PixDynamicGallery.Application.Inventory.Dtos;
 
-namespace PixDynamicGallery.Application.Finance.Commands.AddUsbPurchase;
+namespace PixDynamicGallery.Application.Inventory.Commands.AddUsbPurchase;
 
 public record AddUsbPurchaseCommand : IRequest<UsbPurchaseDto>
 {

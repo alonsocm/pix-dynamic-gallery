@@ -2,12 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using PixDynamicGallery.Application.Common.Interfaces;
 using PixDynamicGallery.Domain.Enums;
 
-namespace PixDynamicGallery.Application.Finance;
+namespace PixDynamicGallery.Application.Inventory;
 
 /// <summary>
 /// Shared math for the paper/ink inventory: the suggested cost/photo (used by
-/// <see cref="Commands.AddPhotoExpense"/> and the finance summaries) and remaining stock. Kept out
-/// of the entities since it reads across two DbSets (<c>PaperPurchases</c> and
+/// <see cref="Finance.Commands.AddPhotoExpense"/> and the finance summaries) and remaining stock.
+/// Kept out of the entities since it reads across two DbSets (<c>PaperPurchases</c> and
 /// <c>EventTransactions</c>) rather than being a single aggregate's invariant.
 /// </summary>
 public static class PaperStockCalculator

@@ -58,6 +58,11 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/admin/finance-dashboard.component').then((m) => m.FinanceDashboardComponent),
           },
+          {
+            path: 'inventory',
+            loadComponent: () =>
+              import('./features/admin/inventory-dashboard.component').then((m) => m.InventoryDashboardComponent),
+          },
         ],
       },
     ],

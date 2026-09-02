@@ -40,6 +40,7 @@ function emptyForm(): FormGroup<AgendaFormControls> {
         <div class="flex gap-2">
           <a routerLink="/admin/events" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 🎪 Eventos </a>
           <a routerLink="/admin/finance" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 💰 Finanzas </a>
+          <a routerLink="/admin/inventory" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📦 Inventario </a>
           <button type="button" (click)="startCreate()" class="rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white">
             + Nueva reserva
           </button>

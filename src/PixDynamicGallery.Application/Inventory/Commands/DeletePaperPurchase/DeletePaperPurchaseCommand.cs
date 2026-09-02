@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace PixDynamicGallery.Application.Finance.Commands.DeletePaperPurchase;
+namespace PixDynamicGallery.Application.Inventory.Commands.DeletePaperPurchase;
 
 public record DeletePaperPurchaseCommand : IRequest
 {

@@ -1,9 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PixDynamicGallery.Application.Common.Interfaces;
-using PixDynamicGallery.Application.Finance.Dtos;
+using PixDynamicGallery.Application.Inventory.Dtos;
 
-namespace PixDynamicGallery.Application.Finance.Queries.GetPaperStock;
+namespace PixDynamicGallery.Application.Inventory.Queries.GetPaperStock;
 
 /// <summary>Admin-only: paper/ink inventory (purchases, remaining sheets, suggested cost/photo) — powers the /admin/finance stock card.</summary>
 public record GetPaperStockQuery : IRequest<PaperStockDto>;

@@ -1,12 +1,15 @@
 namespace PixDynamicGallery.Application.Finance.Dtos;
 
 /// <summary>
-/// Global profit/loss overview — /admin/finance. <see cref="TotalRealExpenses"/> is actual cash out
-/// (global expenses + paper purchases + USB purchases + event expenses that aren't Photos or Usb);
-/// it deliberately excludes the Photos- and Usb-category event expenses since those are allocations
-/// of money already counted in paper/USB purchases, not new spend (see
-/// <see cref="PerEventBreakdownDto.Expense"/> for the per-event view, which does include them so
-/// each event's own margin is visible).
+/// Global balance and reports — /admin/finance. Stock/inventory lives in a separate module
+/// (/admin/inventory, see PaperStockDto/UsbStockDto in Application.Inventory.Dtos) — this DTO is
+/// money only.
+///
+/// <see cref="TotalRealExpenses"/> is actual cash out (global expenses + paper purchases + USB
+/// purchases + event expenses that aren't Photos or Usb); it deliberately excludes the Photos- and
+/// Usb-category event expenses since those are allocations of money already counted in paper/USB
+/// purchases, not new spend (see <see cref="PerEventBreakdownDto.Expense"/> for the per-event view,
+/// which does include them so each event's own margin is visible).
 ///
 /// <see cref="TotalIncome"/> also includes <see cref="PendingDepositsTotal"/> — agenda deposits not
 /// yet transferred to an event's own income (see <see cref="AgendaDeposits"/>). This studio only
@@ -24,14 +27,16 @@ public record FinanceDashboardDto
 
     public required List<PerEventBreakdownDto> PerEventBreakdown { get; init; }
 
-    public required PaperStockDto PaperStock { get; init; }
-
-    public required UsbStockDto UsbStock { get; init; }
-
     /// <summary>Sum of every agenda deposit not yet transferred to an event — already folded into <see cref="TotalIncome"/>, broken out here for visibility.</summary>
     public required decimal PendingDepositsTotal { get; init; }
 
     public required List<PendingAgendaDepositDto> AgendaDeposits { get; init; }
+
+    /// <summary>Income (transactions + still-pending agenda deposits) grouped by the month the money actually came in. Only months with data are included.</summary>
+    public required List<MonthlyAmountDto> IncomeByMonth { get; init; }
+
+    /// <summary>Non-cancelled agenda bookings grouped by their event month — the technical Event carries no date of its own, so this reads from the agenda.</summary>
+    public required List<MonthlyCountDto> EventsByMonth { get; init; }
 }
 
 public record PerEventBreakdownDto
@@ -57,4 +62,22 @@ public record PendingAgendaDepositDto
     public required DateTimeOffset EventDate { get; init; }
 
     public required decimal Total { get; init; }
+}
+
+public record MonthlyAmountDto
+{
+    public required int Year { get; init; }
+
+    public required int Month { get; init; }
+
+    public required decimal Total { get; init; }
+}
+
+public record MonthlyCountDto
+{
+    public required int Year { get; init; }
+
+    public required int Month { get; init; }
+
+    public required int Count { get; init; }
 }

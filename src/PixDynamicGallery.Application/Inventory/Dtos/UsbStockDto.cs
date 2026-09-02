@@ -1,4 +1,4 @@
-namespace PixDynamicGallery.Application.Finance.Dtos;
+namespace PixDynamicGallery.Application.Inventory.Dtos;
 
 /// <summary>USB drive inventory: purchases minus units consumed by Usb-category event expenses.</summary>
 public record UsbStockDto

@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace PixDynamicGallery.Application.Finance.Commands.AddPaperPurchase;
+namespace PixDynamicGallery.Application.Inventory.Commands.AddPaperPurchase;
 
 public class AddPaperPurchaseCommandValidator : AbstractValidator<AddPaperPurchaseCommand>
 {

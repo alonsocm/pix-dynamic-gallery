@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace PixDynamicGallery.Application.Finance.Commands.DeleteUsbPurchase;
+namespace PixDynamicGallery.Application.Inventory.Commands.DeleteUsbPurchase;
 
 public class DeleteUsbPurchaseCommandValidator : AbstractValidator<DeleteUsbPurchaseCommand>
 {

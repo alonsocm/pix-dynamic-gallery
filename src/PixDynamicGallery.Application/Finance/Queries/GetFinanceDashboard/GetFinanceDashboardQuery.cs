@@ -6,7 +6,7 @@ using PixDynamicGallery.Domain.Enums;
 
 namespace PixDynamicGallery.Application.Finance.Queries.GetFinanceDashboard;
 
-/// <summary>Admin-only: global profit/loss overview across every event — powers /admin/finance.</summary>
+/// <summary>Admin-only: global balance and reports across every event — powers /admin/finance. Stock/inventory lives in /admin/inventory instead (see InventoryController).</summary>
 public record GetFinanceDashboardQuery : IRequest<FinanceDashboardDto>;
 
 public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
@@ -26,7 +26,7 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
             from deposit in context.AgendaDeposits
             where deposit.TransferredTransactionId == null
             join entry in context.AgendaEntries on deposit.AgendaEntryId equals entry.Id
-            select new { entry.Id, entry.ClientName, entry.EventDate, deposit.Amount })
+            select new { entry.Id, entry.ClientName, entry.EventDate, deposit.Amount, deposit.PaymentDate })
             .ToListAsync(cancellationToken);
 
         var agendaDeposits = pendingDeposits
@@ -73,31 +73,32 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
             .OrderByDescending(b => b.Profit)
             .ToList();
 
-        var purchases = await context.PaperPurchases.OrderByDescending(p => p.PurchaseDate).ToListAsync(cancellationToken);
-        var totalConsumed = await PaperStockCalculator.GetTotalConsumedSheetsAsync(context, cancellationToken);
-        var totalPurchasedSheets = purchases.Sum(p => p.SheetsCount);
+        // Income by month: every Income EventTransaction plus every still-pending agenda deposit,
+        // each counted in the month its money actually came in (TransactionDate/PaymentDate).
+        var incomeDates = allTransactions
+            .Where(t => t.Type == FinanceTransactionType.Income)
+            .Select(t => (Date: t.TransactionDate, t.Amount))
+            .Concat(pendingDeposits.Select(d => (Date: d.PaymentDate, d.Amount)));
 
-        var paperStock = new PaperStockDto
-        {
-            Purchases = purchases.Select(PaperPurchaseDto.FromEntity).ToList(),
-            TotalPurchasedSheets = totalPurchasedSheets,
-            TotalConsumedSheets = totalConsumed,
-            RemainingSheets = totalPurchasedSheets - totalConsumed,
-            SuggestedCostPerPhoto = await PaperStockCalculator.GetSuggestedCostPerPhotoAsync(context, cancellationToken),
-        };
+        var incomeByMonth = incomeDates
+            .GroupBy(x => new { x.Date.Year, x.Date.Month })
+            .Select(g => new MonthlyAmountDto { Year = g.Key.Year, Month = g.Key.Month, Total = g.Sum(x => x.Amount) })
+            .OrderBy(m => m.Year).ThenBy(m => m.Month)
+            .ToList();
 
-        var usbPurchases = await context.UsbPurchases.OrderByDescending(p => p.PurchaseDate).ToListAsync(cancellationToken);
-        var totalConsumedUsb = await UsbStockCalculator.GetTotalConsumedUnitsAsync(context, cancellationToken);
-        var totalPurchasedUnits = usbPurchases.Sum(p => p.UnitsCount);
+        // Events by month: agenda bookings by their event date, excluding cancelled ones — this is
+        // the only place a date lives (the technical Event has none), and matches how this studio
+        // agendas (see AgendaEntry's doc comment).
+        var agendaEntries = await context.AgendaEntries
+            .Where(a => a.Status != AgendaStatus.Cancelled)
+            .Select(a => new { a.EventDate })
+            .ToListAsync(cancellationToken);
 
-        var usbStock = new UsbStockDto
-        {
-            Purchases = usbPurchases.Select(UsbPurchaseDto.FromEntity).ToList(),
-            TotalPurchasedUnits = totalPurchasedUnits,
-            TotalConsumedUnits = totalConsumedUsb,
-            RemainingUnits = totalPurchasedUnits - totalConsumedUsb,
-            SuggestedCostPerUsb = await UsbStockCalculator.GetSuggestedCostPerUsbAsync(context, cancellationToken),
-        };
+        var eventsByMonth = agendaEntries
+            .GroupBy(a => new { a.EventDate.Year, a.EventDate.Month })
+            .Select(g => new MonthlyCountDto { Year = g.Key.Year, Month = g.Key.Month, Count = g.Count() })
+            .OrderBy(m => m.Year).ThenBy(m => m.Month)
+            .ToList();
 
         return new FinanceDashboardDto
         {
@@ -105,10 +106,10 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
             TotalRealExpenses = totalRealExpenses,
             NetProfit = totalIncome - totalRealExpenses,
             PerEventBreakdown = perEventBreakdown,
-            PaperStock = paperStock,
-            UsbStock = usbStock,
             PendingDepositsTotal = pendingDepositsTotal,
             AgendaDeposits = agendaDeposits,
+            IncomeByMonth = incomeByMonth,
+            EventsByMonth = eventsByMonth,
         };
     }
 }

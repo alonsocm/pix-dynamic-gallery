@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PixDynamicGallery.Application.Common.Exceptions;
 using PixDynamicGallery.Application.Common.Interfaces;
 
-namespace PixDynamicGallery.Application.Finance.Commands.DeleteUsbPurchase;
+namespace PixDynamicGallery.Application.Inventory.Commands.DeleteUsbPurchase;
 
 public class DeleteUsbPurchaseCommandHandler(IApplicationDbContext context) : IRequestHandler<DeleteUsbPurchaseCommand>
 {
