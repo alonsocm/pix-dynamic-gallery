@@ -19,6 +19,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public DbSet<PaperPurchase> PaperPurchases => Set<PaperPurchase>();
 
+    public DbSet<UsbPurchase> UsbPurchases => Set<UsbPurchase>();
+
     public DbSet<GlobalExpense> GlobalExpenses => Set<GlobalExpense>();
 
     public DbSet<FinanceSettings> FinanceSettings => Set<FinanceSettings>();

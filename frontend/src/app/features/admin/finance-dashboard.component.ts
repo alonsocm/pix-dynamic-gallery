@@ -18,6 +18,13 @@ interface PaperPurchaseFormControls {
   notes: FormControl<string>;
 }
 
+interface UsbPurchaseFormControls {
+  purchaseDate: FormControl<string>;
+  unitsCount: FormControl<string>;
+  totalCost: FormControl<string>;
+  notes: FormControl<string>;
+}
+
 function todayLocalDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -123,6 +130,49 @@ function todayLocalDate(): string {
           </form>
         </section>
 
+        <!-- Stock de USBs -->
+        <section class="mb-6 rounded-lg bg-white/10 p-4">
+          <h2 class="font-semibold">🔌 Stock de USBs</h2>
+          <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <p class="text-sm text-white/70">Unidades restantes: <strong class="text-white">{{ d.usbStock.remainingUnits }}</strong></p>
+            <p class="text-sm text-white/70">Compradas: <strong class="text-white">{{ d.usbStock.totalPurchasedUnits }}</strong></p>
+            <p class="text-sm text-white/70">Costo/USB sugerido: <strong class="text-white">{{ formatMoney(d.usbStock.suggestedCostPerUsb) }}</strong></p>
+          </div>
+
+          @if (d.usbStock.purchases.length > 0) {
+            <ul class="mt-3 flex flex-col gap-1 text-xs text-white/50">
+              @for (p of d.usbStock.purchases; track p.id) {
+                <li class="flex items-center justify-between gap-2">
+                  <span>{{ formatDate(p.purchaseDate) }} — {{ p.unitsCount }} USB por {{ formatMoney(p.totalCost) }} ({{ formatMoney(p.costPerUnit) }}/u) @if (p.notes) { · {{ p.notes }} }</span>
+                  <button type="button" (click)="removeUsbPurchase(p.id)" class="shrink-0 text-white/40 hover:text-red-300">🗑️</button>
+                </li>
+              }
+            </ul>
+          }
+
+          <form [formGroup]="usbForm" (ngSubmit)="submitUsbPurchase()" class="mt-3 flex flex-wrap items-end gap-2">
+            <label class="flex flex-col gap-1">
+              <span class="text-xs text-white/50">Fecha</span>
+              <input type="date" formControlName="purchaseDate" class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-xs text-white/50">Unidades</span>
+              <input type="number" min="1" formControlName="unitsCount" class="w-24 rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-xs text-white/50">Costo total</span>
+              <input type="number" min="0" step="0.01" formControlName="totalCost" class="w-28 rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+            </label>
+            <label class="flex flex-1 flex-col gap-1">
+              <span class="text-xs text-white/50">Notas</span>
+              <input formControlName="notes" placeholder="Mercado Libre, proveedor, etc." class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+            </label>
+            <button type="submit" [disabled]="usbForm.invalid || savingUsb()" class="rounded-full bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
+              + Compra
+            </button>
+          </form>
+        </section>
+
         <!-- Costo por km -->
         <section class="mb-6 rounded-lg bg-white/10 p-4">
           <h2 class="font-semibold">⛽ Costo por km</h2>
@@ -221,12 +271,20 @@ export class FinanceDashboardComponent implements OnInit {
   protected readonly globalExpenses = signal<{ id: string; expenseDate: string; category: FinanceCategory; description: string; amount: number }[]>([]);
   protected readonly costPerKmInput = signal('0');
   protected readonly savingPaper = signal(false);
+  protected readonly savingUsb = signal(false);
   protected readonly savingExpense = signal(false);
 
   protected readonly paperForm = new FormGroup<PaperPurchaseFormControls>({
     purchaseDate: new FormControl(todayLocalDate(), { nonNullable: true, validators: [Validators.required] }),
     sheetsCount: new FormControl('108', { nonNullable: true, validators: [Validators.required, Validators.min(1)] }),
     totalCost: new FormControl('800', { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
+    notes: new FormControl('', { nonNullable: true }),
+  });
+
+  protected readonly usbForm = new FormGroup<UsbPurchaseFormControls>({
+    purchaseDate: new FormControl(todayLocalDate(), { nonNullable: true, validators: [Validators.required] }),
+    unitsCount: new FormControl('1', { nonNullable: true, validators: [Validators.required, Validators.min(1)] }),
+    totalCost: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
     notes: new FormControl('', { nonNullable: true }),
   });
 
@@ -276,6 +334,38 @@ export class FinanceDashboardComponent implements OnInit {
         },
         error: () => this.savingPaper.set(false),
       });
+  }
+
+  protected submitUsbPurchase(): void {
+    if (this.usbForm.invalid) {
+      return;
+    }
+    const raw = this.usbForm.getRawValue();
+    this.savingUsb.set(true);
+    this.api
+      .addUsbPurchase({
+        purchaseDate: new Date(raw.purchaseDate).toISOString(),
+        unitsCount: Number(raw.unitsCount),
+        totalCost: Number(raw.totalCost),
+        notes: raw.notes || null,
+      })
+      .subscribe({
+        next: () => {
+          this.savingUsb.set(false);
+          this.usbForm.patchValue({ notes: '' });
+          this.reload();
+        },
+        error: () => this.savingUsb.set(false),
+      });
+  }
+
+  protected removeUsbPurchase(id: string): void {
+    if (!window.confirm('¿Borrar esta compra de USBs?')) {
+      return;
+    }
+    this.api.deleteUsbPurchase(id).subscribe({
+      next: () => this.reload(),
+    });
   }
 
   protected saveCostPerKm(): void {

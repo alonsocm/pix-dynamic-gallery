@@ -22,6 +22,8 @@ public interface IApplicationDbContext
 
     DbSet<PaperPurchase> PaperPurchases { get; }
 
+    DbSet<UsbPurchase> UsbPurchases { get; }
+
     DbSet<GlobalExpense> GlobalExpenses { get; }
 
     DbSet<FinanceSettings> FinanceSettings { get; }

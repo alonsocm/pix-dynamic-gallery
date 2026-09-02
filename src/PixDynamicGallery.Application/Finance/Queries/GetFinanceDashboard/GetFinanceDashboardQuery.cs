@@ -18,6 +18,7 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
         var events = await context.Events.ToListAsync(cancellationToken);
         var globalExpensesTotal = await context.GlobalExpenses.SumAsync(e => (decimal?)e.Amount, cancellationToken) ?? 0m;
         var paperPurchasesTotal = await context.PaperPurchases.SumAsync(p => (decimal?)p.TotalCost, cancellationToken) ?? 0m;
+        var usbPurchasesTotal = await context.UsbPurchases.SumAsync(p => (decimal?)p.TotalCost, cancellationToken) ?? 0m;
 
         // This studio only creates an agenda entry once a deposit has actually been received, so an
         // untransferred deposit (no linked Event yet) is still real income — see FinanceDashboardDto.
@@ -43,13 +44,14 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
 
         var totalIncome = allTransactions.Where(t => t.Type == FinanceTransactionType.Income).Sum(t => t.Amount) + pendingDepositsTotal;
 
-        // Real cash out: global expenses + paper purchases + non-Photos event expenses. Photos-category
-        // event expenses are excluded — they allocate spend already counted in paperPurchasesTotal to a
-        // specific event, not new money out (see FinanceDashboardDto's doc comment).
-        var nonPhotoEventExpenses = allTransactions
-            .Where(t => t.Type == FinanceTransactionType.Expense && t.Category != FinanceCategory.Photos)
+        // Real cash out: global expenses + paper/USB purchases + event expenses that aren't Photos or
+        // Usb. Those two categories are excluded — they allocate spend already counted in
+        // paperPurchasesTotal/usbPurchasesTotal to a specific event, not new money out (see
+        // FinanceDashboardDto's doc comment).
+        var otherEventExpenses = allTransactions
+            .Where(t => t.Type == FinanceTransactionType.Expense && t.Category != FinanceCategory.Photos && t.Category != FinanceCategory.Usb)
             .Sum(t => t.Amount);
-        var totalRealExpenses = globalExpensesTotal + paperPurchasesTotal + nonPhotoEventExpenses;
+        var totalRealExpenses = globalExpensesTotal + paperPurchasesTotal + usbPurchasesTotal + otherEventExpenses;
 
         var perEventBreakdown = events
             .Select(e =>
@@ -84,6 +86,19 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
             SuggestedCostPerPhoto = await PaperStockCalculator.GetSuggestedCostPerPhotoAsync(context, cancellationToken),
         };
 
+        var usbPurchases = await context.UsbPurchases.OrderByDescending(p => p.PurchaseDate).ToListAsync(cancellationToken);
+        var totalConsumedUsb = await UsbStockCalculator.GetTotalConsumedUnitsAsync(context, cancellationToken);
+        var totalPurchasedUnits = usbPurchases.Sum(p => p.UnitsCount);
+
+        var usbStock = new UsbStockDto
+        {
+            Purchases = usbPurchases.Select(UsbPurchaseDto.FromEntity).ToList(),
+            TotalPurchasedUnits = totalPurchasedUnits,
+            TotalConsumedUnits = totalConsumedUsb,
+            RemainingUnits = totalPurchasedUnits - totalConsumedUsb,
+            SuggestedCostPerUsb = await UsbStockCalculator.GetSuggestedCostPerUsbAsync(context, cancellationToken),
+        };
+
         return new FinanceDashboardDto
         {
             TotalIncome = totalIncome,
@@ -91,6 +106,7 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
             NetProfit = totalIncome - totalRealExpenses,
             PerEventBreakdown = perEventBreakdown,
             PaperStock = paperStock,
+            UsbStock = usbStock,
             PendingDepositsTotal = pendingDepositsTotal,
             AgendaDeposits = agendaDeposits,
         };

@@ -16,6 +16,7 @@ public class EventTransactionConfiguration : IEntityTypeConfiguration<EventTrans
         builder.Property(t => t.CostPerPhotoSnapshot).HasPrecision(18, 4);
         builder.Property(t => t.DistanceKm).HasPrecision(18, 2);
         builder.Property(t => t.CostPerKmSnapshot).HasPrecision(18, 4);
+        builder.Property(t => t.CostPerUsbSnapshot).HasPrecision(18, 4);
 
         builder.Property(t => t.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(t => t.Category).HasConversion<string>().HasMaxLength(20).IsRequired();

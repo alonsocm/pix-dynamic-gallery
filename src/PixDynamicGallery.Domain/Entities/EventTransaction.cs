@@ -41,6 +41,11 @@ public class EventTransaction : BaseEntity
 
     public decimal? CostPerKmSnapshot { get; private set; }
 
+    /// <summary>USB drive count used to compute a <see cref="FinanceCategory.Usb"/> row's original amount — normally 1 (one handed out per event).</summary>
+    public int? UsbCount { get; private set; }
+
+    public decimal? CostPerUsbSnapshot { get; private set; }
+
     private EventTransaction()
     {
         // Required by EF Core.
@@ -57,7 +62,9 @@ public class EventTransaction : BaseEntity
         int? photoCount,
         decimal? costPerPhotoSnapshot,
         decimal? distanceKm,
-        decimal? costPerKmSnapshot)
+        decimal? costPerKmSnapshot,
+        int? usbCount,
+        decimal? costPerUsbSnapshot)
     {
         EventId = eventId;
         Type = type;
@@ -70,6 +77,8 @@ public class EventTransaction : BaseEntity
         CostPerPhotoSnapshot = costPerPhotoSnapshot;
         DistanceKm = distanceKm;
         CostPerKmSnapshot = costPerKmSnapshot;
+        UsbCount = usbCount;
+        CostPerUsbSnapshot = costPerUsbSnapshot;
     }
 
     public static EventTransaction CreateManual(
@@ -86,7 +95,8 @@ public class EventTransaction : BaseEntity
         }
 
         return new EventTransaction(eventId, type, category, description?.Trim(), amount, transactionDate,
-            isAutoCalculated: false, photoCount: null, costPerPhotoSnapshot: null, distanceKm: null, costPerKmSnapshot: null);
+            isAutoCalculated: false, photoCount: null, costPerPhotoSnapshot: null, distanceKm: null, costPerKmSnapshot: null,
+            usbCount: null, costPerUsbSnapshot: null);
     }
 
     /// <summary>Photo-print cost for the event: <paramref name="photoCount"/> × <paramref name="costPerPhoto"/>.</summary>
@@ -109,7 +119,8 @@ public class EventTransaction : BaseEntity
         var amount = photoCount * costPerPhoto;
         return new EventTransaction(eventId, FinanceTransactionType.Expense, FinanceCategory.Photos,
             description: $"{photoCount} foto(s) × {costPerPhoto:0.00}", amount, transactionDate,
-            isAutoCalculated: true, photoCount, costPerPhoto, distanceKm: null, costPerKmSnapshot: null);
+            isAutoCalculated: true, photoCount, costPerPhoto, distanceKm: null, costPerKmSnapshot: null,
+            usbCount: null, costPerUsbSnapshot: null);
     }
 
     /// <summary>Fuel cost for the event: <paramref name="distanceKm"/> × <paramref name="costPerKm"/>.</summary>
@@ -132,7 +143,32 @@ public class EventTransaction : BaseEntity
         var amount = distanceKm * costPerKm;
         return new EventTransaction(eventId, FinanceTransactionType.Expense, FinanceCategory.Gasoline,
             description: $"{distanceKm:0.0} km × {costPerKm:0.00}", amount, transactionDate,
-            isAutoCalculated: true, photoCount: null, costPerPhotoSnapshot: null, distanceKm, costPerKm);
+            isAutoCalculated: true, photoCount: null, costPerPhotoSnapshot: null, distanceKm, costPerKm,
+            usbCount: null, costPerUsbSnapshot: null);
+    }
+
+    /// <summary>USB drive cost for the event: <paramref name="usbCount"/> × <paramref name="costPerUsb"/> — normally 1 drive.</summary>
+    public static EventTransaction CreateUsbExpense(
+        Guid eventId,
+        int usbCount,
+        decimal costPerUsb,
+        DateTimeOffset transactionDate)
+    {
+        if (usbCount < 0)
+        {
+            throw new DomainException("USB count cannot be negative.");
+        }
+
+        if (costPerUsb < 0)
+        {
+            throw new DomainException("Cost per USB cannot be negative.");
+        }
+
+        var amount = usbCount * costPerUsb;
+        return new EventTransaction(eventId, FinanceTransactionType.Expense, FinanceCategory.Usb,
+            description: $"{usbCount} USB × {costPerUsb:0.00}", amount, transactionDate,
+            isAutoCalculated: true, photoCount: null, costPerPhotoSnapshot: null, distanceKm: null, costPerKmSnapshot: null,
+            usbCount, costPerUsb);
     }
 
     /// <summary>Hand-edits any transaction (auto-calculated or not) — the formula snapshot, if any, is left untouched for reference.</summary>

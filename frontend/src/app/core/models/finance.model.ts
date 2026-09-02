@@ -14,11 +14,13 @@ export enum FinanceCategory {
   Equipment = 5,
   Marketing = 6,
   Other = 7,
+  Usb = 8,
 }
 
 export const INCOME_CATEGORIES: FinanceCategory[] = [FinanceCategory.Payment, FinanceCategory.Tip, FinanceCategory.Other];
 export const EXPENSE_CATEGORIES: FinanceCategory[] = [
   FinanceCategory.Photos,
+  FinanceCategory.Usb,
   FinanceCategory.Gasoline,
   FinanceCategory.Paper,
   FinanceCategory.Equipment,
@@ -35,6 +37,7 @@ export const FINANCE_CATEGORY_LABELS: Record<FinanceCategory, string> = {
   [FinanceCategory.Equipment]: 'Equipo',
   [FinanceCategory.Marketing]: 'Marketing',
   [FinanceCategory.Other]: 'Otro',
+  [FinanceCategory.Usb]: 'USB',
 };
 
 /** Mirrors PixDynamicGallery.Application.Finance.Dtos.EventTransactionDto. */
@@ -51,6 +54,8 @@ export interface EventTransactionDto {
   costPerPhotoSnapshot: number | null;
   distanceKm: number | null;
   costPerKmSnapshot: number | null;
+  usbCount: number | null;
+  costPerUsbSnapshot: number | null;
 }
 
 /** Mirrors PixDynamicGallery.Application.Finance.Dtos.EventFinanceSummaryDto. */
@@ -63,6 +68,8 @@ export interface EventFinanceSummaryDto {
   suggestedPhotoCount: number;
   suggestedCostPerPhoto: number;
   suggestedCostPerKm: number;
+  suggestedUsbCount: number;
+  suggestedCostPerUsb: number;
 }
 
 /** Mirrors PixDynamicGallery.Application.Finance.Dtos.PaperPurchaseDto. */
@@ -82,6 +89,25 @@ export interface PaperStockDto {
   totalConsumedSheets: number;
   remainingSheets: number;
   suggestedCostPerPhoto: number;
+}
+
+/** Mirrors PixDynamicGallery.Application.Finance.Dtos.UsbPurchaseDto. */
+export interface UsbPurchaseDto {
+  id: string;
+  purchaseDate: string;
+  unitsCount: number;
+  totalCost: number;
+  costPerUnit: number;
+  notes: string | null;
+}
+
+/** Mirrors PixDynamicGallery.Application.Finance.Dtos.UsbStockDto. */
+export interface UsbStockDto {
+  purchases: UsbPurchaseDto[];
+  totalPurchasedUnits: number;
+  totalConsumedUnits: number;
+  remainingUnits: number;
+  suggestedCostPerUsb: number;
 }
 
 /** Mirrors PixDynamicGallery.Application.Finance.Dtos.GlobalExpenseDto. */
@@ -105,6 +131,7 @@ export interface FinanceDashboardDto {
   netProfit: number;
   perEventBreakdown: PerEventBreakdownDto[];
   paperStock: PaperStockDto;
+  usbStock: UsbStockDto;
   /** Sum of every agenda deposit not yet transferred to an event — already folded into totalIncome, broken out here for visibility. */
   pendingDepositsTotal: number;
   agendaDeposits: PendingAgendaDepositDto[];

@@ -30,4 +30,7 @@ public enum FinanceCategory
 
     /// <summary>Anything that doesn't fit another category, income or expense.</summary>
     Other = 7,
+
+    /// <summary>Expense: the USB drive handed to the client at each event — see <see cref="Entities.EventTransaction.CreateUsbExpense"/>.</summary>
+    Usb = 8,
 }

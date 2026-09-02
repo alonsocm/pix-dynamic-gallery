@@ -4,6 +4,7 @@ using PixDynamicGallery.Api.Auth;
 using PixDynamicGallery.Application.Finance.Commands.AddEventTransaction;
 using PixDynamicGallery.Application.Finance.Commands.AddGasolineExpense;
 using PixDynamicGallery.Application.Finance.Commands.AddPhotoExpense;
+using PixDynamicGallery.Application.Finance.Commands.AddUsbExpense;
 using PixDynamicGallery.Application.Finance.Commands.DeleteEventTransaction;
 using PixDynamicGallery.Application.Finance.Commands.UpdateEventTransaction;
 using PixDynamicGallery.Application.Finance.Dtos;
@@ -85,6 +86,24 @@ public class EventTransactionsController(ISender sender) : ControllerBase
         return CreatedAtAction(nameof(GetAll), new { eventId }, result);
     }
 
+    /// <summary>Auto-calculates the USB drive expense: USB count (default 1) × cost/USB. Cost/USB defaults to the latest USB purchase's cost/unit but can be overridden.</summary>
+    [HttpPost("usb-expense")]
+    [ProducesResponseType(typeof(EventTransactionDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<EventTransactionDto>> AddUsbExpense(Guid eventId, AddUsbExpenseRequest request, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new AddUsbExpenseCommand
+            {
+                EventId = eventId,
+                UsbCount = request.UsbCount,
+                CostPerUsb = request.CostPerUsb,
+                TransactionDate = request.TransactionDate,
+            },
+            cancellationToken);
+        return CreatedAtAction(nameof(GetAll), new { eventId }, result);
+    }
+
     /// <summary>Hand-edits any transaction, including auto-calculated ones.</summary>
     [HttpPatch("{transactionId:guid}")]
     [ProducesResponseType(typeof(EventTransactionDto), StatusCodes.Status200OK)]
@@ -118,5 +137,7 @@ public record AddEventTransactionRequest(FinanceTransactionType Type, FinanceCat
 public record AddPhotoExpenseRequest(int? PhotoCount, decimal? CostPerPhoto, DateTimeOffset? TransactionDate);
 
 public record AddGasolineExpenseRequest(decimal DistanceKm, decimal? CostPerKm, DateTimeOffset? TransactionDate);
+
+public record AddUsbExpenseRequest(int? UsbCount, decimal? CostPerUsb, DateTimeOffset? TransactionDate);
 
 public record UpdateEventTransactionRequest(decimal Amount, string? Description, DateTimeOffset TransactionDate);

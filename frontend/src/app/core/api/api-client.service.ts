@@ -15,6 +15,8 @@ import {
   GlobalExpenseDto,
   PaperPurchaseDto,
   PaperStockDto,
+  UsbPurchaseDto,
+  UsbStockDto,
 } from '../models/finance.model';
 import { PaginatedList } from '../models/paginated-list.model';
 import { PhotoDto } from '../models/photo.model';
@@ -170,6 +172,17 @@ export class ApiClient {
     );
   }
 
+  addUsbExpense(
+    eventId: string,
+    request: { usbCount?: number | null; costPerUsb?: number | null; transactionDate?: string | null },
+  ): Observable<EventTransactionDto> {
+    return this.http.post<EventTransactionDto>(
+      `${this.config.apiBaseUrl}/api/events/${eventId}/transactions/usb-expense`,
+      request,
+      { headers: this.adminHeaders() },
+    );
+  }
+
   updateEventTransaction(
     eventId: string,
     transactionId: string,
@@ -221,6 +234,22 @@ export class ApiClient {
 
   deletePaperPurchase(id: string): Observable<void> {
     return this.http.delete<void>(`${this.config.apiBaseUrl}/api/finance/paper-purchases/${id}`, { headers: this.adminHeaders() });
+  }
+
+  getUsbStock(): Observable<UsbStockDto> {
+    return this.http.get<UsbStockDto>(`${this.config.apiBaseUrl}/api/finance/usb-stock`, { headers: this.adminHeaders() });
+  }
+
+  addUsbPurchase(request: { purchaseDate: string; unitsCount: number; totalCost: number; notes?: string | null }): Observable<UsbPurchaseDto> {
+    return this.http.post<UsbPurchaseDto>(
+      `${this.config.apiBaseUrl}/api/finance/usb-purchases`,
+      request,
+      { headers: this.adminHeaders() },
+    );
+  }
+
+  deleteUsbPurchase(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.config.apiBaseUrl}/api/finance/usb-purchases/${id}`, { headers: this.adminHeaders() });
   }
 
   getGlobalExpenses(): Observable<GlobalExpenseDto[]> {

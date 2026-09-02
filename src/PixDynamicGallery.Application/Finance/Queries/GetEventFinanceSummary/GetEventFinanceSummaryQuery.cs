@@ -33,6 +33,7 @@ public class GetEventFinanceSummaryQueryHandler(IApplicationDbContext context)
             .CountAsync(p => p.EventId == request.EventId && p.Status == Domain.Enums.PhotoStatus.Uploaded, cancellationToken);
         var suggestedCostPerPhoto = await PaperStockCalculator.GetSuggestedCostPerPhotoAsync(context, cancellationToken);
         var suggestedCostPerKm = (await context.FinanceSettings.FirstAsync(cancellationToken)).CostPerKm;
+        var suggestedCostPerUsb = await UsbStockCalculator.GetSuggestedCostPerUsbAsync(context, cancellationToken);
 
         return new EventFinanceSummaryDto
         {
@@ -44,6 +45,8 @@ public class GetEventFinanceSummaryQueryHandler(IApplicationDbContext context)
             SuggestedPhotoCount = suggestedPhotoCount,
             SuggestedCostPerPhoto = suggestedCostPerPhoto,
             SuggestedCostPerKm = suggestedCostPerKm,
+            SuggestedUsbCount = 1,
+            SuggestedCostPerUsb = suggestedCostPerUsb,
         };
     }
 }

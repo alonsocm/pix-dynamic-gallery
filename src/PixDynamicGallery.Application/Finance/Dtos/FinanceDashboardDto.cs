@@ -2,10 +2,11 @@ namespace PixDynamicGallery.Application.Finance.Dtos;
 
 /// <summary>
 /// Global profit/loss overview — /admin/finance. <see cref="TotalRealExpenses"/> is actual cash out
-/// (global expenses + paper purchases + non-Photos event expenses); it deliberately excludes the
-/// Photos-category event expenses since those are an allocation of money already counted in paper
-/// purchases, not new spend (see <see cref="PerEventBreakdownDto.Expense"/> for the per-event view,
-/// which does include Photos so each event's own margin is visible).
+/// (global expenses + paper purchases + USB purchases + event expenses that aren't Photos or Usb);
+/// it deliberately excludes the Photos- and Usb-category event expenses since those are allocations
+/// of money already counted in paper/USB purchases, not new spend (see
+/// <see cref="PerEventBreakdownDto.Expense"/> for the per-event view, which does include them so
+/// each event's own margin is visible).
 ///
 /// <see cref="TotalIncome"/> also includes <see cref="PendingDepositsTotal"/> — agenda deposits not
 /// yet transferred to an event's own income (see <see cref="AgendaDeposits"/>). This studio only
@@ -24,6 +25,8 @@ public record FinanceDashboardDto
     public required List<PerEventBreakdownDto> PerEventBreakdown { get; init; }
 
     public required PaperStockDto PaperStock { get; init; }
+
+    public required UsbStockDto UsbStock { get; init; }
 
     /// <summary>Sum of every agenda deposit not yet transferred to an event — already folded into <see cref="TotalIncome"/>, broken out here for visibility.</summary>
     public required decimal PendingDepositsTotal { get; init; }

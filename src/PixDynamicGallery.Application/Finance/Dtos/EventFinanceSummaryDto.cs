@@ -20,4 +20,9 @@ public record EventFinanceSummaryDto
     public required decimal SuggestedCostPerPhoto { get; init; }
 
     public required decimal SuggestedCostPerKm { get; init; }
+
+    /// <summary>Suggested USB count for the next auto-calculated Usb expense — normally 1 (one drive handed out per event).</summary>
+    public required int SuggestedUsbCount { get; init; }
+
+    public required decimal SuggestedCostPerUsb { get; init; }
 }

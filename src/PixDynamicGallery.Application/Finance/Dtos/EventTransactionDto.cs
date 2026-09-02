@@ -29,6 +29,10 @@ public record EventTransactionDto
 
     public decimal? CostPerKmSnapshot { get; init; }
 
+    public int? UsbCount { get; init; }
+
+    public decimal? CostPerUsbSnapshot { get; init; }
+
     public static EventTransactionDto FromEntity(EventTransaction t) => new()
     {
         Id = t.Id,
@@ -43,5 +47,7 @@ public record EventTransactionDto
         CostPerPhotoSnapshot = t.CostPerPhotoSnapshot,
         DistanceKm = t.DistanceKm,
         CostPerKmSnapshot = t.CostPerKmSnapshot,
+        UsbCount = t.UsbCount,
+        CostPerUsbSnapshot = t.CostPerUsbSnapshot,
     };
 }

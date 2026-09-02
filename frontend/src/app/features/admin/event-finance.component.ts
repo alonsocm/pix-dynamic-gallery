@@ -86,6 +86,20 @@ function todayLocalDate(): string {
               ⛽ Agregar gasto de gasolina
             </button>
           </div>
+
+          <div class="flex flex-wrap items-end gap-2">
+            <label class="flex flex-col gap-1">
+              <span class="text-xs text-white/50">USBs ({{ s.suggestedUsbCount }} sugeridas)</span>
+              <input type="number" min="0" [value]="usbCountInput()" (input)="usbCountInput.set($any($event.target).value)" class="w-24 rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-xs text-white/50">Costo/USB</span>
+              <input type="number" min="0" step="0.01" [value]="costPerUsbInput()" (input)="costPerUsbInput.set($any($event.target).value)" class="w-24 rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+            </label>
+            <button type="button" [disabled]="addingUsbExpense()" (click)="addUsbExpense()" class="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
+              🔌 Agregar gasto de USB
+            </button>
+          </div>
         </div>
 
         <!-- Movimiento manual -->
@@ -169,8 +183,11 @@ export class EventFinanceComponent implements OnInit {
   protected readonly costPerPhotoInput = signal('0');
   protected readonly distanceKmInput = signal('');
   protected readonly costPerKmInput = signal('0');
+  protected readonly usbCountInput = signal('1');
+  protected readonly costPerUsbInput = signal('0');
   protected readonly addingPhotoExpense = signal(false);
   protected readonly addingGasolineExpense = signal(false);
+  protected readonly addingUsbExpense = signal(false);
   protected readonly savingManual = signal(false);
 
   protected readonly form = new FormGroup<TransactionFormControls>({
@@ -251,6 +268,22 @@ export class EventFinanceComponent implements OnInit {
       });
   }
 
+  protected addUsbExpense(): void {
+    this.addingUsbExpense.set(true);
+    this.api
+      .addUsbExpense(this.event().id, {
+        usbCount: this.usbCountInput() ? Number(this.usbCountInput()) : null,
+        costPerUsb: this.costPerUsbInput() ? Number(this.costPerUsbInput()) : null,
+      })
+      .subscribe({
+        next: () => {
+          this.addingUsbExpense.set(false);
+          this.reload(this.event().id);
+        },
+        error: () => this.addingUsbExpense.set(false),
+      });
+  }
+
   protected submitManual(): void {
     if (this.form.invalid) {
       return;
@@ -292,6 +325,8 @@ export class EventFinanceComponent implements OnInit {
         this.photoCountInput.set(String(summary.suggestedPhotoCount));
         this.costPerPhotoInput.set(String(summary.suggestedCostPerPhoto));
         this.costPerKmInput.set(String(summary.suggestedCostPerKm));
+        this.usbCountInput.set(String(summary.suggestedUsbCount));
+        this.costPerUsbInput.set(String(summary.suggestedCostPerUsb));
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
