@@ -69,7 +69,10 @@ function todayLocalDate(): string {
           @if (d.paperStock.purchases.length > 0) {
             <ul class="mt-3 flex flex-col gap-1 text-xs text-white/50">
               @for (p of d.paperStock.purchases; track p.id) {
-                <li>{{ formatDate(p.purchaseDate) }} — {{ p.sheetsCount }} hojas por {{ formatMoney(p.totalCost) }} ({{ formatMoney(p.costPerSheet) }}/hoja) @if (p.notes) { · {{ p.notes }} }</li>
+                <li class="flex items-center justify-between gap-2">
+                  <span>{{ formatDate(p.purchaseDate) }} — {{ p.sheetsCount }} hojas por {{ formatMoney(p.totalCost) }} ({{ formatMoney(p.costPerSheet) }}/hoja) @if (p.notes) { · {{ p.notes }} }</span>
+                  <button type="button" (click)="removePaperPurchase(p.id)" class="shrink-0 text-white/40 hover:text-red-300">🗑️</button>
+                </li>
               }
             </ul>
           }
@@ -282,6 +285,15 @@ export class FinanceDashboardComponent implements OnInit {
         },
         error: () => this.savingExpense.set(false),
       });
+  }
+
+  protected removePaperPurchase(id: string): void {
+    if (!window.confirm('¿Borrar esta compra de papel?')) {
+      return;
+    }
+    this.api.deletePaperPurchase(id).subscribe({
+      next: () => this.reload(),
+    });
   }
 
   protected removeGlobalExpense(id: string): void {

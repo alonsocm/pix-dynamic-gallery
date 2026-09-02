@@ -4,6 +4,7 @@ using PixDynamicGallery.Api.Auth;
 using PixDynamicGallery.Application.Finance.Commands.AddGlobalExpense;
 using PixDynamicGallery.Application.Finance.Commands.AddPaperPurchase;
 using PixDynamicGallery.Application.Finance.Commands.DeleteGlobalExpense;
+using PixDynamicGallery.Application.Finance.Commands.DeletePaperPurchase;
 using PixDynamicGallery.Application.Finance.Commands.UpdateFinanceSettings;
 using PixDynamicGallery.Application.Finance.Dtos;
 using PixDynamicGallery.Application.Finance.Queries.GetFinanceDashboard;
@@ -61,6 +62,15 @@ public class FinanceController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetPaperStock), new { }, result);
+    }
+
+    [HttpDelete("paper-purchases/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletePaperPurchase(Guid id, CancellationToken cancellationToken)
+    {
+        await sender.Send(new DeletePaperPurchaseCommand { Id = id }, cancellationToken);
+        return NoContent();
     }
 
     /// <summary>Business expenses not tied to a specific event (equipment, marketing, etc.).</summary>

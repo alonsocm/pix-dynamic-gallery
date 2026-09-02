@@ -202,6 +202,10 @@ export class ApiClient {
     );
   }
 
+  deletePaperPurchase(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.config.apiBaseUrl}/api/finance/paper-purchases/${id}`, { headers: this.adminHeaders() });
+  }
+
   getGlobalExpenses(): Observable<GlobalExpenseDto[]> {
     return this.http.get<GlobalExpenseDto[]>(`${this.config.apiBaseUrl}/api/finance/global-expenses`, { headers: this.adminHeaders() });
   }
