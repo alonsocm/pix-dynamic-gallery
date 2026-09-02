@@ -14,5 +14,15 @@ public interface IApplicationDbContext
 
     DbSet<Photo> Photos { get; }
 
+    DbSet<AgendaEntry> AgendaEntries { get; }
+
+    DbSet<EventTransaction> EventTransactions { get; }
+
+    DbSet<PaperPurchase> PaperPurchases { get; }
+
+    DbSet<GlobalExpense> GlobalExpenses { get; }
+
+    DbSet<FinanceSettings> FinanceSettings { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

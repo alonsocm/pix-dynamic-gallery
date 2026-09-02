@@ -13,7 +13,9 @@ import { AdminEventDto } from '../../core/models/event.model';
     <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div class="mb-6 flex items-center justify-between gap-4">
         <h1 class="text-2xl font-bold">Eventos</h1>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
+          <a routerLink="/admin/agenda" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📅 Agenda </a>
+          <a routerLink="/admin/finance" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 💰 Finanzas </a>
           <a routerLink="/admin/events/new" class="rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white">
             + Nuevo evento
           </a>
@@ -68,6 +70,12 @@ import { AdminEventDto } from '../../core/models/event.model';
                   class="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white"
                 >
                   🖼️ Fotos
+                </a>
+                <a
+                  [routerLink]="['/admin/events', event.slug, 'finance']"
+                  class="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white"
+                >
+                  💰 Finanzas
                 </a>
                 <button
                   type="button"

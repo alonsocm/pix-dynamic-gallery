@@ -11,6 +11,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public DbSet<Photo> Photos => Set<Photo>();
 
+    public DbSet<AgendaEntry> AgendaEntries => Set<AgendaEntry>();
+
+    public DbSet<EventTransaction> EventTransactions => Set<EventTransaction>();
+
+    public DbSet<PaperPurchase> PaperPurchases => Set<PaperPurchase>();
+
+    public DbSet<GlobalExpense> GlobalExpenses => Set<GlobalExpense>();
+
+    public DbSet<FinanceSettings> FinanceSettings => Set<FinanceSettings>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
