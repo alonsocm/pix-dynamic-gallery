@@ -19,7 +19,29 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
         var globalExpensesTotal = await context.GlobalExpenses.SumAsync(e => (decimal?)e.Amount, cancellationToken) ?? 0m;
         var paperPurchasesTotal = await context.PaperPurchases.SumAsync(p => (decimal?)p.TotalCost, cancellationToken) ?? 0m;
 
-        var totalIncome = allTransactions.Where(t => t.Type == FinanceTransactionType.Income).Sum(t => t.Amount);
+        // This studio only creates an agenda entry once a deposit has actually been received, so an
+        // untransferred deposit (no linked Event yet) is still real income — see FinanceDashboardDto.
+        var pendingDeposits = await (
+            from deposit in context.AgendaDeposits
+            where deposit.TransferredTransactionId == null
+            join entry in context.AgendaEntries on deposit.AgendaEntryId equals entry.Id
+            select new { entry.Id, entry.ClientName, entry.EventDate, deposit.Amount })
+            .ToListAsync(cancellationToken);
+
+        var agendaDeposits = pendingDeposits
+            .GroupBy(d => new { d.Id, d.ClientName, d.EventDate })
+            .Select(g => new PendingAgendaDepositDto
+            {
+                AgendaEntryId = g.Key.Id,
+                ClientName = g.Key.ClientName,
+                EventDate = g.Key.EventDate,
+                Total = g.Sum(d => d.Amount),
+            })
+            .OrderBy(d => d.EventDate)
+            .ToList();
+        var pendingDepositsTotal = agendaDeposits.Sum(d => d.Total);
+
+        var totalIncome = allTransactions.Where(t => t.Type == FinanceTransactionType.Income).Sum(t => t.Amount) + pendingDepositsTotal;
 
         // Real cash out: global expenses + paper purchases + non-Photos event expenses. Photos-category
         // event expenses are excluded — they allocate spend already counted in paperPurchasesTotal to a
@@ -69,6 +91,8 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext context)
             NetProfit = totalIncome - totalRealExpenses,
             PerEventBreakdown = perEventBreakdown,
             PaperStock = paperStock,
+            PendingDepositsTotal = pendingDepositsTotal,
+            AgendaDeposits = agendaDeposits,
         };
     }
 }

@@ -44,6 +44,9 @@ function todayLocalDate(): string {
           <div class="rounded-lg bg-white/10 p-4">
             <p class="text-xs text-white/50">Ingresos totales</p>
             <p class="mt-1 text-xl font-bold text-emerald-400">{{ formatMoney(d.totalIncome) }}</p>
+            @if (d.pendingDepositsTotal > 0) {
+              <p class="mt-1 text-[11px] text-white/40">incluye {{ formatMoney(d.pendingDepositsTotal) }} en anticipos de agenda</p>
+            }
           </div>
           <div class="rounded-lg bg-white/10 p-4">
             <p class="text-xs text-white/50">Gastos reales</p>
@@ -56,6 +59,26 @@ function todayLocalDate(): string {
             </p>
           </div>
         </div>
+
+        <!-- Anticipos de agenda pendientes de evento -->
+        @if (d.agendaDeposits.length > 0) {
+          <section class="mb-6 rounded-lg bg-white/10 p-4">
+            <h2 class="font-semibold">📅 Anticipos de agenda pendientes de evento</h2>
+            <p class="mt-1 text-xs text-white/40">
+              Ya cuentan como ingreso arriba — cuando crees el evento técnico y lo vincules, pasan a ser el ingreso de ese evento.
+            </p>
+            <ul class="mt-2 flex flex-col gap-1 text-sm">
+              @for (dep of d.agendaDeposits; track dep.agendaEntryId) {
+                <li class="flex items-center justify-between gap-2">
+                  <a routerLink="/admin/agenda" class="truncate text-white/80 hover:underline">
+                    {{ dep.clientName }} <span class="text-white/40">· {{ formatDate(dep.eventDate) }}</span>
+                  </a>
+                  <span class="font-semibold text-emerald-400">{{ formatMoney(dep.total) }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
 
         <!-- Stock de papel -->
         <section class="mb-6 rounded-lg bg-white/10 p-4">

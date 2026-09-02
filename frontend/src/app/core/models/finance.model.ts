@@ -105,6 +105,17 @@ export interface FinanceDashboardDto {
   netProfit: number;
   perEventBreakdown: PerEventBreakdownDto[];
   paperStock: PaperStockDto;
+  /** Sum of every agenda deposit not yet transferred to an event — already folded into totalIncome, broken out here for visibility. */
+  pendingDepositsTotal: number;
+  agendaDeposits: PendingAgendaDepositDto[];
+}
+
+/** Mirrors PixDynamicGallery.Application.Finance.Dtos.PendingAgendaDepositDto. */
+export interface PendingAgendaDepositDto {
+  agendaEntryId: string;
+  clientName: string;
+  eventDate: string;
+  total: number;
 }
 
 export interface PerEventBreakdownDto {
