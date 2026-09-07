@@ -42,7 +42,7 @@ import { Router } from '@angular/router';
             type="button"
             (click)="goToWall()"
             [disabled]="!slug()"
-            class="flex-1 rounded-full bg-brand-500 px-4 py-2 font-semibold text-white transition disabled:opacity-30"
+            class="flex-1 rounded-full bg-brand-600 px-4 py-2 font-semibold text-white transition disabled:opacity-30"
           >
             🧱 Muro
           </button>

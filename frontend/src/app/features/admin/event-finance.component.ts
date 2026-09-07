@@ -2,6 +2,7 @@ import { Component, OnInit, effect, inject, input, signal } from '@angular/core'
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiClient } from '../../core/api/api-client.service';
+import { localDateInputToIso } from '../../core/common/local-date';
 import { EventDto } from '../../core/models/event.model';
 import {
   EXPENSE_CATEGORIES,
@@ -107,16 +108,16 @@ function todayLocalDate(): string {
           <h2 class="font-semibold">Movimiento manual</h2>
           <div class="flex flex-wrap items-end gap-2">
             <div class="flex gap-1">
-              <button type="button" (click)="setType(FinanceTransactionType.Income)" [class.bg-brand-500]="type() === FinanceTransactionType.Income" [class.bg-white/10]="type() !== FinanceTransactionType.Income" class="rounded-full px-4 py-1.5 text-sm font-semibold text-white">
+              <button type="button" (click)="setType(FinanceTransactionType.Income)" [class.bg-brand-600]="type() === FinanceTransactionType.Income" [class.bg-white/10]="type() !== FinanceTransactionType.Income" class="rounded-full px-4 py-1.5 text-sm font-semibold text-white">
                 Ingreso
               </button>
-              <button type="button" (click)="setType(FinanceTransactionType.Expense)" [class.bg-brand-500]="type() === FinanceTransactionType.Expense" [class.bg-white/10]="type() !== FinanceTransactionType.Expense" class="rounded-full px-4 py-1.5 text-sm font-semibold text-white">
+              <button type="button" (click)="setType(FinanceTransactionType.Expense)" [class.bg-brand-600]="type() === FinanceTransactionType.Expense" [class.bg-white/10]="type() !== FinanceTransactionType.Expense" class="rounded-full px-4 py-1.5 text-sm font-semibold text-white">
                 Gasto
               </button>
             </div>
             <label class="flex flex-col gap-1">
               <span class="text-xs text-white/50">Categoría</span>
-              <select formControlName="category" class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500">
+              <select formControlName="category" aria-label="Categoría" class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500">
                 @for (c of categoriesForType(); track c) {
                   <option [ngValue]="c">{{ categoryLabel(c) }}</option>
                 }
@@ -134,7 +135,7 @@ function todayLocalDate(): string {
               <span class="text-xs text-white/50">Fecha</span>
               <input type="date" formControlName="transactionDate" class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
             </label>
-            <button type="submit" [disabled]="form.invalid || savingManual()" class="rounded-full bg-brand-500 px-5 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
+            <button type="submit" [disabled]="form.invalid || savingManual()" class="rounded-full bg-brand-600 px-5 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
               + Agregar
             </button>
           </div>
@@ -157,7 +158,7 @@ function todayLocalDate(): string {
                   <span [class.text-emerald-400]="t.type === FinanceTransactionType.Income" [class.text-red-400]="t.type === FinanceTransactionType.Expense" class="font-semibold">
                     {{ t.type === FinanceTransactionType.Income ? '+' : '−' }}{{ formatMoney(t.amount) }}
                   </span>
-                  <button type="button" (click)="removeTransaction(t)" class="text-xs text-white/40 hover:text-red-300">🗑️</button>
+                  <button type="button" (click)="removeTransaction(t)" aria-label="Borrar movimiento" class="text-xs text-white/40 hover:text-red-300">🗑️</button>
                 </div>
               </li>
             }
@@ -296,7 +297,7 @@ export class EventFinanceComponent implements OnInit {
         category: raw.category,
         description: raw.description || null,
         amount: Number(raw.amount),
-        transactionDate: new Date(raw.transactionDate).toISOString(),
+        transactionDate: localDateInputToIso(raw.transactionDate),
       })
       .subscribe({
         next: () => {

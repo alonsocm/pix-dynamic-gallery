@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiClient } from '../../core/api/api-client.service';
+import { localDateInputToIso } from '../../core/common/local-date';
 import { PaperStockDto, UsbStockDto } from '../../core/models/inventory.model';
 
 interface PaperPurchaseFormControls {
@@ -55,7 +56,7 @@ function todayLocalDate(): string {
                 @for (p of ps.purchases; track p.id) {
                   <li class="flex items-center justify-between gap-2">
                     <span>{{ formatDate(p.purchaseDate) }} — {{ p.sheetsCount }} hojas por {{ formatMoney(p.totalCost) }} ({{ formatMoney(p.costPerSheet) }}/hoja) @if (p.notes) { · {{ p.notes }} }</span>
-                    <button type="button" (click)="removePaperPurchase(p.id)" class="shrink-0 text-white/40 hover:text-red-300">🗑️</button>
+                    <button type="button" (click)="removePaperPurchase(p.id)" aria-label="Borrar compra de papel" class="shrink-0 text-white/40 hover:text-red-300">🗑️</button>
                   </li>
                 }
               </ul>
@@ -79,7 +80,7 @@ function todayLocalDate(): string {
               <span class="text-xs text-white/50">Notas</span>
               <input formControlName="notes" placeholder="Mercado Libre, promoción, etc." class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
             </label>
-            <button type="submit" [disabled]="paperForm.invalid || savingPaper()" class="rounded-full bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
+            <button type="submit" [disabled]="paperForm.invalid || savingPaper()" class="rounded-full bg-brand-600 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
               + Compra
             </button>
           </form>
@@ -100,7 +101,7 @@ function todayLocalDate(): string {
                 @for (p of us.purchases; track p.id) {
                   <li class="flex items-center justify-between gap-2">
                     <span>{{ formatDate(p.purchaseDate) }} — {{ p.unitsCount }} USB por {{ formatMoney(p.totalCost) }} ({{ formatMoney(p.costPerUnit) }}/u) @if (p.notes) { · {{ p.notes }} }</span>
-                    <button type="button" (click)="removeUsbPurchase(p.id)" class="shrink-0 text-white/40 hover:text-red-300">🗑️</button>
+                    <button type="button" (click)="removeUsbPurchase(p.id)" aria-label="Borrar compra de USB" class="shrink-0 text-white/40 hover:text-red-300">🗑️</button>
                   </li>
                 }
               </ul>
@@ -124,7 +125,7 @@ function todayLocalDate(): string {
               <span class="text-xs text-white/50">Notas</span>
               <input formControlName="notes" placeholder="Mercado Libre, proveedor, etc." class="rounded-lg bg-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
             </label>
-            <button type="submit" [disabled]="usbForm.invalid || savingUsb()" class="rounded-full bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
+            <button type="submit" [disabled]="usbForm.invalid || savingUsb()" class="rounded-full bg-brand-600 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-30">
               + Compra
             </button>
           </form>
@@ -176,7 +177,7 @@ export class InventoryDashboardComponent implements OnInit {
     this.savingPaper.set(true);
     this.api
       .addPaperPurchase({
-        purchaseDate: new Date(raw.purchaseDate).toISOString(),
+        purchaseDate: localDateInputToIso(raw.purchaseDate),
         sheetsCount: Number(raw.sheetsCount),
         totalCost: Number(raw.totalCost),
         notes: raw.notes || null,
@@ -208,7 +209,7 @@ export class InventoryDashboardComponent implements OnInit {
     this.savingUsb.set(true);
     this.api
       .addUsbPurchase({
-        purchaseDate: new Date(raw.purchaseDate).toISOString(),
+        purchaseDate: localDateInputToIso(raw.purchaseDate),
         unitsCount: Number(raw.unitsCount),
         totalCost: Number(raw.totalCost),
         notes: raw.notes || null,

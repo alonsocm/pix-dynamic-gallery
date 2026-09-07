@@ -21,7 +21,7 @@ import { Component, input, signal } from '@angular/core';
         <button
           type="button"
           (click)="share()"
-          class="flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3 font-semibold text-white transition active:scale-95"
+          class="flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-3 font-semibold text-white transition active:scale-95"
         >
           📤 Compartir
         </button>
@@ -29,7 +29,7 @@ import { Component, input, signal } from '@angular/core';
         <button
           type="button"
           (click)="copyLink()"
-          class="flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3 font-semibold text-white transition active:scale-95"
+          class="flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-3 font-semibold text-white transition active:scale-95"
         >
           {{ copied() ? '✅ ¡Copiado!' : '🔗 Copiar link' }}
         </button>

@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-05T02:50:35Z",
+  "title": "Design System: Pix",
+  "extensions": {
+    "colorMeta": {
+      "flash-magenta": {
+        "role": "primary-accent",
+        "displayName": "Flash Magenta",
+        "canonical": "#ec4899",
+        "tonalRamp": ["#831843", "#9d174d", "#be185d", "#db2777", "#ec4899", "#f472b6", "#f9a8d4", "#fce7f3"]
+      },
+      "flash-magenta-deep": {
+        "role": "primary-fill",
+        "displayName": "Flash Magenta Deep",
+        "canonical": "#db2777",
+        "tonalRamp": ["#831843", "#9d174d", "#be185d", "#db2777", "#ec4899", "#f472b6", "#f9a8d4", "#fce7f3"]
+      },
+      "void-black": {
+        "role": "neutral",
+        "displayName": "Void Black",
+        "canonical": "#18181b",
+        "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8"]
+      },
+      "neon-emerald": {
+        "role": "semantic-positive",
+        "displayName": "Neon Emerald",
+        "canonical": "#34d399",
+        "tonalRamp": ["#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#34d399", "#6ee7b7", "#a7f3d0"]
+      },
+      "warning-coral": {
+        "role": "semantic-negative",
+        "displayName": "Warning Coral",
+        "canonical": "#f87171",
+        "tonalRamp": ["#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fecaca"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles (\"Finanzas\", \"Agenda\") and the kiosk's event-name hero." },
+      "headline": { "displayName": "Headline", "purpose": "Card/section titles and button labels." },
+      "body": { "displayName": "Body", "purpose": "Default paragraph copy." },
+      "label": { "displayName": "Label", "purpose": "Form field labels, metadata lines, status badges." },
+      "mono": { "displayName": "Mono", "purpose": "Literal identifiers only — event slugs, filesystem watch paths." }
+    },
+    "shadows": [
+      { "name": "photo-lift", "value": "0 25px 50px -12px rgba(0, 0, 0, 0.5)", "purpose": "The only shadow role in the system — applied exclusively under a rendered photo (kiosk hero, guest photo, wall/lightbox images) so it reads as a physical object over a flat room." },
+      { "name": "photo-lift-deep", "value": "0 25px 50px -12px rgba(0, 0, 0, 0.6)", "purpose": "Slightly heavier variant of photo-lift used on the kiosk's hero photo." }
+    ],
+    "motion": [
+      { "name": "press-feedback", "value": "transform 0.15s ease-out; active: scale(0.95)", "purpose": "Universal tap/press feedback on every button and interactive tile." },
+      { "name": "photo-drop-in", "value": "cubic-bezier(0.34, 1.56, 0.64, 1) 0.62s", "purpose": "Polaroid drop-in entrance for wall photo tiles — falls in tilted, overshoots, settles flat. Staggered per tile via --photo-delay." },
+      { "name": "ease-standard", "value": "ease (default Tailwind transition)", "purpose": "Default hover/focus color and opacity transitions." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The system's one high-intent action — submit, share, \"+ Nueva reserva\". Flash Magenta Deep (not the brighter Flash Magenta — that shade fails AA contrast with white text at this size), always a pill.",
+      "html": "<button class=\"ds-btn-primary\">+ Nueva reserva</button>",
+      "css": ".ds-btn-primary { background: #db2777; color: #ffffff; font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-weight: 600; font-size: 0.875rem; padding: 8px 16px; border-radius: 9999px; border: none; transition: background 0.15s ease-out, transform 0.15s ease-out; } .ds-btn-primary:focus-visible { outline: 2px solid #ec4899; outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.95); } .ds-btn-primary:disabled { opacity: 0.3; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Every non-primary action and the top-of-page navigation pills (\"Eventos\", \"Agenda\", \"Cancelar\").",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.70); font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-weight: 600; font-size: 0.875rem; padding: 8px 16px; border-radius: 9999px; border: none; transition: background 0.15s ease-out, transform 0.15s ease-out; } .ds-btn-secondary:hover { background: rgba(255,255,255,0.16); } .ds-btn-secondary:active { transform: scale(0.95); }"
+    },
+    {
+      "name": "Download Button",
+      "kind": "button",
+      "refersTo": "button-download",
+      "description": "Signature variant: styled as a physical print leaving the system, not as UI — Paper White fill, void-black text. Reserved for the guest's \"Descargar\" action.",
+      "html": "<button class=\"ds-btn-download\">⬇️ Descargar</button>",
+      "css": ".ds-btn-download { background: #ffffff; color: #18181b; font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-weight: 600; font-size: 1rem; padding: 12px 24px; border-radius: 9999px; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.15s ease-out; } .ds-btn-download:active { transform: scale(0.95); }"
+    },
+    {
+      "name": "Status Badge — Active",
+      "kind": "chip",
+      "refersTo": "badge-active",
+      "description": "Confirmed/active state — event is live, agenda entry confirmed. Same Flash Magenta Deep fill and AA-contrast reasoning as the primary button.",
+      "html": "<span class=\"ds-badge-active\">Activo</span>",
+      "css": ".ds-badge-active { display: inline-block; background: #db2777; color: #ffffff; font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-weight: 600; font-size: 0.75rem; padding: 4px 12px; border-radius: 9999px; }"
+    },
+    {
+      "name": "Status Badge — Inactive",
+      "kind": "chip",
+      "refersTo": "badge-inactive",
+      "description": "Pending/inactive state — same shape as Active, quieter fill.",
+      "html": "<span class=\"ds-badge-inactive\">Inactivo</span>",
+      "css": ".ds-badge-inactive { display: inline-block; background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.50); font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-weight: 600; font-size: 0.75rem; padding: 4px 12px; border-radius: 9999px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The default frosted-panel container for every list item, form, and dashboard section. Flat — no shadow, no border.",
+      "html": "<div class=\"ds-card\"><h2 class=\"ds-card-title\">Ingresos totales</h2><p class=\"ds-card-body\">$12,450.00</p></div>",
+      "css": ".ds-card { background: rgba(255,255,255,0.10); border-radius: 8px; padding: 16px; } .ds-card-title { font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-weight: 600; font-size: 1rem; color: rgba(255,255,255,0.90); margin: 0 0 4px; } .ds-card-body { font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-weight: 700; font-size: 1.25rem; color: #34d399; margin: 0; }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Frosted-panel text field, no resting border — the focus ring is the only border-like treatment in the system.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Cliente</span><input class=\"ds-input\" type=\"text\" placeholder=\"Nombre del cliente\" /></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 4px; } .ds-field-label { font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; color: rgba(255,255,255,0.70); } .ds-input { background: rgba(255,255,255,0.10); color: #ffffff; font-family: Poppins, ui-sans-serif, system-ui, sans-serif; font-size: 1rem; padding: 8px 12px; border-radius: 8px; border: none; outline: none; } .ds-input::placeholder { color: rgba(255,255,255,0.30); } .ds-input:focus-visible { box-shadow: 0 0 0 2px #ec4899; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Neon Instant",
+    "overview": "Pix lives in the moment right after the flash — a dark room lit by one bright thing at a time. The canvas is void-black (#18181b), the same tone as the venue itself: no card is whiter than it needs to be, no section fights the photo for attention. Against that dark field, exactly one accent gets to be loud — magenta (flash magenta on the canvas itself, its deeper shade under white text on a filled surface) — used the way a strobe is used: rare, sudden, and always on something that matters (a primary action, an active state, a confirmed status). Everything else is frosted glass: translucent white-on-black panels (bg-white/10) that read as UI chrome without ever competing with what's printed on the \"paper\" above them.\n\nThe system is unapologetically tactile — full pill buttons, saturated fills, visible press feedback (active:scale-95) — built for a phone tapped once in a dark room, not a mouse hovering a desktop. Depth is rationed on purpose: everywhere that isn't a photograph is flat, tonal layering only; the one place shadows and blur are allowed to exist is around an actual photo, which is the system's only \"object\" — everything else is surface. Iconography leans on real emoji instead of a drawn icon set, which keeps the voice playful and instantly legible in Spanish-first copy without adding an icon library.\n\nThis is one visual language, not two: the guest-facing kiosk/wall/photo pages and the operator's Spanish-language admin screens (agenda, finance, inventory) share the exact same tokens, components, and rules. The admin side is not a \"serious business\" reskin — it's the same neon-instant room, just with tables and forms instead of a QR code.",
+    "keyCharacteristics": [
+      "Void-black canvas, one magenta accent used sparingly and only for what matters most",
+      "Frosted-glass panels (white/10) — flat, tonal, no shadows on UI chrome",
+      "Full-pill buttons and badges; rounded-lg for containers; a dedicated, more generous radius reserved only for photographic imagery",
+      "Depth (shadow, blur) exists only around real photos and the full-screen lightbox — a physical object in a flat room",
+      "Tactile press feedback (active:scale-95/98) on every tappable element",
+      "Emoji as the icon system, throughout guest and admin surfaces alike"
+    ],
+    "rules": [
+      { "name": "The One Strobe Rule", "body": "Flash Magenta lights up exactly one thing at a time — the primary action or the confirmed state — never a background, a large panel, or more than one competing element in the same view. Its rarity is what makes it read as \"on.\"", "section": "colors" },
+      { "name": "The Paper Exception Rule", "body": "Paper White is reserved for things meant to feel like a physical print leaving the system — the QR code and the \"Descargar\" button. Nothing else gets a white surface.", "section": "colors" },
+      { "name": "The Deep-Fill Rule", "body": "White text sits only on Flash Magenta Deep, never on the brighter Flash Magenta — the bright shade drops below WCAG AA (3.5:1) under white text at button/badge size. The bright shade is for color-on-black uses only (rings, links, thin decorative fills).", "section": "colors" },
+      { "name": "The One Voice Rule", "body": "There is exactly one font family in this system. A new surface never introduces a second typeface for \"contrast\" — hierarchy comes from weight, size, and opacity only.", "section": "typography" },
+      { "name": "The Flat Room Rule", "body": "UI chrome never casts a shadow. If something needs to look lifted off the page, it is a photograph (or the overlay holding one) — not a button, card, or panel.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do ration Flash Magenta to one element per screen — the primary action or the single active state. If two things on screen are magenta, one of them is wrong.",
+      "Do use rounded-full for anything tappable and rounded-lg for anything that just contains content — never mix the two roles.",
+      "Do reserve rounded-photo and shadow-2xl exclusively for actual photographic imagery.",
+      "Do use the four white-opacity text steps (/90, /70, /50, /30) as the entire neutral text scale — don't introduce a gray hex value.",
+      "Do give every tappable element active:scale-95-style press feedback.",
+      "Do reach for an emoji before reaching for an SVG icon; it's the established icon system.",
+      "Do give every icon-only button (no visible text label, e.g. a bare 🗑️) an explicit aria-label — an emoji is not announced as its meaning by assistive tech."
+    ],
+    "donts": [
+      "Don't add a box-shadow to a card, button, badge, or input — depth belongs to photographs only.",
+      "Don't introduce a second accent color; Neon Emerald and Warning Coral are semantic (money in/out) only, never decorative.",
+      "Don't add a border/stroke to a resting input or card — separation comes from opacity and radius, not lines.",
+      "Don't build a visually distinct \"admin theme\" — agenda/finance/inventory use the exact same tokens and components as the guest-facing kiosk/wall/guest pages.",
+      "Don't introduce a second font family for hierarchy or \"personality\" — Poppins carries the whole system at every weight and size."
+    ]
+  }
+}

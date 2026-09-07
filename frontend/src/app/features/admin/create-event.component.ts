@@ -67,7 +67,7 @@ function absoluteUrlValidator(): ValidatorFn {
             </a>
             <a
               [routerLink]="['/e', created.slug, 'wall']"
-              class="flex-1 rounded-full bg-brand-500 px-4 py-2 text-center font-semibold text-white"
+              class="flex-1 rounded-full bg-brand-600 px-4 py-2 text-center font-semibold text-white"
             >
               🧱 Ir al Muro
             </a>
@@ -122,7 +122,7 @@ function absoluteUrlValidator(): ValidatorFn {
               <button
                 type="button"
                 (click)="applyRuntimeMode('docker')"
-                [class.bg-brand-500]="runtimeMode() === 'docker'"
+                [class.bg-brand-600]="runtimeMode() === 'docker'"
                 [class.bg-white/10]="runtimeMode() !== 'docker'"
                 class="flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-white"
               >
@@ -131,7 +131,7 @@ function absoluteUrlValidator(): ValidatorFn {
               <button
                 type="button"
                 (click)="applyRuntimeMode('native')"
-                [class.bg-brand-500]="runtimeMode() === 'native'"
+                [class.bg-brand-600]="runtimeMode() === 'native'"
                 [class.bg-white/10]="runtimeMode() !== 'native'"
                 class="flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-white"
               >
@@ -170,7 +170,7 @@ function absoluteUrlValidator(): ValidatorFn {
           <button
             type="submit"
             [disabled]="form.invalid || submitting()"
-            class="mt-2 rounded-full bg-brand-500 px-6 py-3 font-semibold text-white disabled:opacity-30"
+            class="mt-2 rounded-full bg-brand-600 px-6 py-3 font-semibold text-white disabled:opacity-30"
           >
             {{ submitting() ? 'Creando…' : 'Crear evento' }}
           </button>

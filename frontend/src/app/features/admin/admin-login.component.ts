@@ -39,7 +39,7 @@ import { ApiClient } from '../../core/api/api-client.service';
         <button
           type="submit"
           [disabled]="form.invalid || submitting()"
-          class="rounded-full bg-brand-500 px-6 py-3 font-semibold text-white disabled:opacity-30"
+          class="rounded-full bg-brand-600 px-6 py-3 font-semibold text-white disabled:opacity-30"
         >
           {{ submitting() ? 'Verificando…' : 'Entrar' }}
         </button>

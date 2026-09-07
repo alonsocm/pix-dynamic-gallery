@@ -45,3 +45,7 @@ Thumbs.db
 
 # Claude Code local session config (machine-specific, not part of the project)
 .claude/
+
+# Impeccable design-hook cache (session-keyed, purely local — DESIGN.md/PRODUCT.md/
+# .impeccable/critique/ and .impeccable/config.json stay tracked, this doesn't)
+.impeccable/hook.cache.json

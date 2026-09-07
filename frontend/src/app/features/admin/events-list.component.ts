@@ -17,7 +17,7 @@ import { AdminEventDto } from '../../core/models/event.model';
           <a routerLink="/admin/agenda" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📅 Agenda </a>
           <a routerLink="/admin/finance" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 💰 Finanzas </a>
           <a routerLink="/admin/inventory" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📦 Inventario </a>
-          <a routerLink="/admin/events/new" class="rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white">
+          <a routerLink="/admin/events/new" class="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
             + Nuevo evento
           </a>
           <button type="button" (click)="logout()" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70">
@@ -43,7 +43,7 @@ import { AdminEventDto } from '../../core/models/event.model';
                 </div>
                 <span
                   class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
-                  [class.bg-brand-500]="event.isActive"
+                  [class.bg-brand-600]="event.isActive"
                   [class.text-white]="event.isActive"
                   [class.bg-white/10]="!event.isActive"
                   [class.text-white/50]="!event.isActive"

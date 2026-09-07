@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiClient } from '../../core/api/api-client.service';
+import { localDateInputToIso } from '../../core/common/local-date';
 import { AGENDA_STATUS_LABELS, AGENDA_STATUSES, AgendaDepositDto, AgendaEntryDto, AgendaStatus } from '../../core/models/agenda.model';
 import { AdminEventDto } from '../../core/models/event.model';
 
@@ -41,7 +42,7 @@ function emptyForm(): FormGroup<AgendaFormControls> {
           <a routerLink="/admin/events" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 🎪 Eventos </a>
           <a routerLink="/admin/finance" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 💰 Finanzas </a>
           <a routerLink="/admin/inventory" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📦 Inventario </a>
-          <button type="button" (click)="startCreate()" class="rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white">
+          <button type="button" (click)="startCreate()" class="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
             + Nueva reserva
           </button>
         </div>
@@ -108,7 +109,7 @@ function emptyForm(): FormGroup<AgendaFormControls> {
             <button
               type="submit"
               [disabled]="form.invalid || saving()"
-              class="rounded-full bg-brand-500 px-5 py-2 text-sm font-semibold text-white disabled:opacity-30"
+              class="rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-30"
             >
               {{ saving() ? 'Guardando…' : editingId() ? 'Guardar cambios' : 'Crear reserva' }}
             </button>
@@ -134,7 +135,7 @@ function emptyForm(): FormGroup<AgendaFormControls> {
                 </div>
                 <span
                   class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
-                  [class.bg-brand-500]="entry.status === AgendaStatus.Confirmed"
+                  [class.bg-brand-600]="entry.status === AgendaStatus.Confirmed"
                   [class.text-white]="entry.status === AgendaStatus.Confirmed"
                   [class.bg-white/10]="entry.status !== AgendaStatus.Confirmed"
                   [class.text-white/50]="entry.status !== AgendaStatus.Confirmed"
@@ -177,7 +178,7 @@ function emptyForm(): FormGroup<AgendaFormControls> {
                           }
                         </span>
                         @if (!dep.transferredTransactionId) {
-                          <button type="button" (click)="removeDeposit(entry, dep)" class="text-white/30 hover:text-red-300">🗑️</button>
+                          <button type="button" (click)="removeDeposit(entry, dep)" aria-label="Borrar anticipo" class="text-white/30 hover:text-red-300">🗑️</button>
                         }
                       </li>
                     }
@@ -219,7 +220,7 @@ function emptyForm(): FormGroup<AgendaFormControls> {
                       type="button"
                       [disabled]="!depositAmount() || savingDeposit()"
                       (click)="submitDeposit(entry)"
-                      class="rounded-full bg-brand-500 px-3 py-1 text-xs font-semibold text-white disabled:opacity-30"
+                      class="rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-30"
                     >
                       Guardar
                     </button>
@@ -420,7 +421,7 @@ export class AgendaListComponent implements OnInit {
     this.api
       .addAgendaDeposit(entry.id, {
         amount,
-        paymentDate: new Date(this.depositDate()).toISOString(),
+        paymentDate: localDateInputToIso(this.depositDate()),
         notes: this.depositNotes() || null,
       })
       .subscribe({
