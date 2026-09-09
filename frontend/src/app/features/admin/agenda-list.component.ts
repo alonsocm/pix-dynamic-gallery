@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiClient } from '../../core/api/api-client.service';
 import { isoToLocalDateTimeInput, localDateInputToIso, localDateTimeInputToIso } from '../../core/common/local-date';
@@ -43,7 +43,7 @@ function emptyForm(): FormGroup<AgendaFormControls> {
       </div>
 
       @if (formOpen()) {
-        <form [formGroup]="form" (ngSubmit)="submit()" class="mb-6 flex flex-col gap-3 rounded-lg bg-white/10 p-4">
+        <form #formSection [formGroup]="form" (ngSubmit)="submit()" class="mb-6 flex flex-col gap-3 rounded-lg bg-white/10 p-4">
           <h2 class="font-semibold">{{ editingId() ? 'Editar reserva' : 'Nueva reserva' }}</h2>
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -282,6 +282,9 @@ export class AgendaListComponent implements OnInit {
   protected readonly depositNotes = signal('');
   protected readonly savingDeposit = signal(false);
 
+  /** Bound to the `<form>` via `#formSection` — used to scroll it into view when opened from an entry further down the list (mobile: the entry's "Editar" button can be far below where the form renders). */
+  private readonly formSection = viewChild<ElementRef<HTMLFormElement>>('formSection');
+
   private events: AdminEventDto[] = [];
 
   ngOnInit(): void {
@@ -305,6 +308,7 @@ export class AgendaListComponent implements OnInit {
     this.form = emptyForm();
     this.error.set(null);
     this.formOpen.set(true);
+    this.scrollToForm();
   }
 
   protected startEdit(entry: AgendaEntryDto): void {
@@ -322,10 +326,16 @@ export class AgendaListComponent implements OnInit {
     });
     this.error.set(null);
     this.formOpen.set(true);
+    this.scrollToForm();
   }
 
   protected closeForm(): void {
     this.formOpen.set(false);
+  }
+
+  /** The form always renders at the top of the page; "Editar" on an entry near the bottom of the list otherwise leaves it off-screen. Deferred a tick so the `@if` has actually rendered the form before we look it up. */
+  private scrollToForm(): void {
+    setTimeout(() => this.formSection()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 
   protected submit(): void {
