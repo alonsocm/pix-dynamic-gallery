@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiClient } from '../../core/api/api-client.service';
-import { localDateInputToIso } from '../../core/common/local-date';
+import { isoToLocalDateTimeInput, localDateInputToIso, localDateTimeInputToIso } from '../../core/common/local-date';
 import { AGENDA_STATUS_LABELS, AGENDA_STATUSES, AgendaDepositDto, AgendaEntryDto, AgendaStatus } from '../../core/models/agenda.model';
 import { AdminEventDto } from '../../core/models/event.model';
 
@@ -313,7 +313,7 @@ export class AgendaListComponent implements OnInit {
     this.form.setValue({
       clientName: entry.clientName,
       eventType: entry.eventType,
-      eventDate: entry.eventDate.slice(0, 16),
+      eventDate: isoToLocalDateTimeInput(entry.eventDate),
       contactPhone: entry.contactPhone ?? '',
       contactEmail: entry.contactEmail ?? '',
       location: entry.location ?? '',
@@ -338,7 +338,7 @@ export class AgendaListComponent implements OnInit {
     const request = {
       clientName: raw.clientName,
       eventType: raw.eventType,
-      eventDate: new Date(raw.eventDate).toISOString(),
+      eventDate: localDateTimeInputToIso(raw.eventDate),
       contactPhone: raw.contactPhone || null,
       contactEmail: raw.contactEmail || null,
       location: raw.location || null,
