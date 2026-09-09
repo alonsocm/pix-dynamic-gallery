@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { ApiClient } from '../../core/api/api-client.service';
 import { localDateInputToIso } from '../../core/common/local-date';
 import { AGENDA_STATUS_LABELS, AGENDA_STATUSES, AgendaDepositDto, AgendaEntryDto, AgendaStatus } from '../../core/models/agenda.model';
@@ -33,19 +32,14 @@ function emptyForm(): FormGroup<AgendaFormControls> {
 /** `/admin/agenda` — bookings/prospects, independent of the technical Event they may later turn into. */
 @Component({
   selector: 'app-agenda-list',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule],
   template: `
     <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div class="mb-6 flex items-center justify-between gap-4">
         <h1 class="text-2xl font-bold">Agenda</h1>
-        <div class="flex gap-2">
-          <a routerLink="/admin/events" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 🎪 Eventos </a>
-          <a routerLink="/admin/finance" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 💰 Finanzas </a>
-          <a routerLink="/admin/inventory" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📦 Inventario </a>
-          <button type="button" (click)="startCreate()" class="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
-            + Nueva reserva
-          </button>
-        </div>
+        <button type="button" (click)="startCreate()" class="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
+          + Nueva reserva
+        </button>
       </div>
 
       @if (formOpen()) {

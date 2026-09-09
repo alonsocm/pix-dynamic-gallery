@@ -285,9 +285,20 @@ No borders are used anywhere in the system; surfaces are separated by opacity an
 - **Labels:** small (`text-xs`/`text-sm`) `text-white/70` label sitting directly above the field.
 
 ### Navigation
-- A flat row of Secondary-style pill links (`rounded-full bg-white/10`) at the top of every admin
-  screen, doubling as breadcrumbs between Eventos/Agenda/Finanzas/Inventario — no separate nav
-  chrome, no active-state styling on the current section's own link.
+- A single persistent shell (`AdminShellComponent`) wraps every guarded `/admin/*` route: a flat
+  top bar with the brand mark, one Secondary-style pill (`rounded-full bg-white/10`) back to
+  🏠 Dashboard, and the "Salir" action — no per-page copies, no re-render on navigation.
+- The Dashboard is the single hub for switching between Eventos/Agenda/Finanzas/Inventario — its
+  cards are the only place all four are listed together. The top bar deliberately does *not*
+  repeat that list: from any module page, the way to another module is back through the
+  Dashboard pill, not a second row of the same four links. (An earlier version put both a full
+  module row in the top bar *and* the same four as dashboard cards — same modules, listed twice
+  on screen at once — which is exactly what this one-hub design avoids.)
+- The Dashboard pill lights up in magenta (`bg-brand-600 text-white`) only while on `/admin`
+  itself — the "One Strobe Rule" applied to nav, via `routerLinkActive`. Drill-down pages
+  (`/admin/events/:id/photos`, `/admin/events/:id/finance`) sit inside the same shell but keep
+  their own `← Eventos` back-link instead — that's a breadcrumb one level down from Eventos, not
+  a jump back to the hub.
 
 ### Photo Tile (signature component)
 The wall's masonry tile: a native `<button>` (not a div) wrapping a lazy, `@defer`-loaded thumbnail,

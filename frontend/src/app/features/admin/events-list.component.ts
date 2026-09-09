@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { AdminAuthService } from '../../core/admin/admin-auth.service';
+import { RouterLink } from '@angular/router';
 import { ApiClient } from '../../core/api/api-client.service';
 import { buildGuestWallUrl } from '../../core/event/guest-photo-url';
 import { AdminEventDto } from '../../core/models/event.model';
@@ -13,17 +12,9 @@ import { AdminEventDto } from '../../core/models/event.model';
     <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div class="mb-6 flex items-center justify-between gap-4">
         <h1 class="text-2xl font-bold">Eventos</h1>
-        <div class="flex flex-wrap gap-2">
-          <a routerLink="/admin/agenda" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📅 Agenda </a>
-          <a routerLink="/admin/finance" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 💰 Finanzas </a>
-          <a routerLink="/admin/inventory" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📦 Inventario </a>
-          <a routerLink="/admin/events/new" class="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
-            + Nuevo evento
-          </a>
-          <button type="button" (click)="logout()" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70">
-            Salir
-          </button>
-        </div>
+        <a routerLink="/admin/events/new" class="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
+          + Nuevo evento
+        </a>
       </div>
 
       @if (loading()) {
@@ -103,8 +94,6 @@ import { AdminEventDto } from '../../core/models/event.model';
 })
 export class EventsListComponent implements OnInit {
   private readonly api = inject(ApiClient);
-  private readonly adminAuth = inject(AdminAuthService);
-  private readonly router = inject(Router);
 
   protected readonly events = signal<AdminEventDto[]>([]);
   protected readonly loading = signal(true);
@@ -156,10 +145,5 @@ export class EventsListComponent implements OnInit {
         });
       },
     });
-  }
-
-  protected logout(): void {
-    this.adminAuth.clear();
-    void this.router.navigateByUrl('/admin/login');
   }
 }

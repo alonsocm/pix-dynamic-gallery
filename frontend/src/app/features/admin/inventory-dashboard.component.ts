@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { ApiClient } from '../../core/api/api-client.service';
 import { localDateInputToIso } from '../../core/common/local-date';
 import { PaperStockDto, UsbStockDto } from '../../core/models/inventory.model';
@@ -26,17 +25,10 @@ function todayLocalDate(): string {
 /** `/admin/inventory` — supply stock handed out or consumed at every event (paper/ink, USB drives). Kept separate from /admin/finance, which is money only. */
 @Component({
   selector: 'app-inventory-dashboard',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule],
   template: `
     <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <div class="mb-6 flex items-center justify-between gap-4">
-        <h1 class="text-2xl font-bold">Inventario</h1>
-        <div class="flex flex-wrap gap-2">
-          <a routerLink="/admin/events" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 🎪 Eventos </a>
-          <a routerLink="/admin/agenda" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📅 Agenda </a>
-          <a routerLink="/admin/finance" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 💰 Finanzas </a>
-        </div>
-      </div>
+      <h1 class="mb-6 text-2xl font-bold">Inventario</h1>
 
       @if (loading()) {
         <p class="py-16 text-center text-white/50">Cargando…</p>

@@ -71,7 +71,7 @@ export class AdminLoginComponent {
     this.api.listEvents().subscribe({
       next: () => {
         this.submitting.set(false);
-        void this.router.navigateByUrl('/admin/events');
+        void this.router.navigateByUrl('/admin');
       },
       error: (error: HttpErrorResponse) => {
         this.submitting.set(false);

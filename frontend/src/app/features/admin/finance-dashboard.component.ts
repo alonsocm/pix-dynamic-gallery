@@ -53,14 +53,7 @@ const EVENT_BREAKDOWN_PAGE_SIZE = 8;
   imports: [ReactiveFormsModule, RouterLink],
   template: `
     <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <div class="mb-6 flex items-center justify-between gap-4">
-        <h1 class="text-2xl font-bold">Finanzas</h1>
-        <div class="flex flex-wrap gap-2">
-          <a routerLink="/admin/events" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 🎪 Eventos </a>
-          <a routerLink="/admin/agenda" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📅 Agenda </a>
-          <a routerLink="/admin/inventory" class="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/70"> 📦 Inventario </a>
-        </div>
-      </div>
+      <h1 class="mb-6 text-2xl font-bold">Finanzas</h1>
 
       @if (loading()) {
         <p class="py-16 text-center text-white/50">Cargando…</p>

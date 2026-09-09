@@ -5,9 +5,12 @@ import { photoResolver } from './core/event/photo.resolver';
 
 export const routes: Routes = [
   {
+    // No public "home" experience exists (guests arrive via QR straight into /e/:eventId/... or
+    // /kiosk/:eventId) — the bare root now just forwards into the guarded admin area, which
+    // itself redirects to /admin/login when there's no session.
     path: '',
     pathMatch: 'full',
-    loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent),
+    redirectTo: '/admin',
   },
   {
     path: 'admin',
@@ -20,7 +23,16 @@ export const routes: Routes = [
       {
         path: '',
         canActivate: [adminAuthGuard],
+        // AdminShellComponent renders the persistent top nav (module links + logout) and its own
+        // <router-outlet> for everything below — replaces the pill row every page used to repeat.
+        loadComponent: () =>
+          import('./features/admin/admin-shell.component').then((m) => m.AdminShellComponent),
         children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./features/admin/admin-dashboard.component').then((m) => m.AdminDashboardComponent),
+          },
           {
             path: 'events',
             loadComponent: () =>
