@@ -78,10 +78,10 @@ cut at a venue.
 ## Kiosk screen setup
 
 The kiosk screen (the one guests see, with the live photo + QR code) is just a browser pointed at
-`https://somospix.com/kiosk/<eventId>`, in full-screen/kiosk mode so there's no address bar or
+`https://app.somospix.com/kiosk/<eventId>`, in full-screen/kiosk mode so there's no address bar or
 window chrome to fiddle with:
 
-- **Chrome/Edge**: `chrome.exe --kiosk https://somospix.com/kiosk/<eventId>` (a desktop shortcut
+- **Chrome/Edge**: `chrome.exe --kiosk https://app.somospix.com/kiosk/<eventId>` (a desktop shortcut
   with that target is the simplest way to make it a one-click launch).
 - Disable sleep/screensaver on the display (Windows Settings > Power) — the screen needs to stay on
   for the whole event.

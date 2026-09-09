@@ -194,7 +194,7 @@ provider's free tier, chosen for a specific constraint:
 
 | Piece | Where | Why |
 |---|---|---|
-| Frontend | **Cloudflare Pages** (`somospix.com`) | Free CDN, auto-deploy from this repo's `main` branch. Deployed via `npx wrangler deploy` — see `frontend/wrangler.jsonc` |
+| Frontend | **Cloudflare Pages** (`app.somospix.com`) | Free CDN, auto-deploy from this repo's `main` branch. Deployed via `npx wrangler deploy` — see `frontend/wrangler.jsonc`. The domain's root (`somospix.com`) is a separate marketing landing page project (`pix-landingpage`), not this repo |
 | API + watcher (writes, realtime) | **Native on the photobooth cabin PC** | The watcher needs the real local filesystem — it can't run in the cloud without adding a separate sync agent |
 | API standby (reads, always-on) | **Azure Container Apps** (`Watcher:Enabled=false`) | Same Docker image, watcher off — keeps the gallery (wall, guest photo page, creating an event) reachable even when the cabin PC is powered off, since none of those endpoints touch the local filesystem. See `tools/azure-standby/env.example`. |
 | Exposing the cabin's API | **Cloudflare Tunnel** (`api.somospix.com` → `localhost:8080`) | No port-forwarding, works behind any venue's WiFi/NAT, supports WebSockets (SignalR) |

@@ -1,6 +1,6 @@
 # Estado del proyecto — Pix Dynamic Gallery
 
-> Documento vivo para retomar el trabajo en otra sesión. Última actualización: 13 de agosto de 2026 (sesión Paso 5).
+> Documento vivo para retomar el trabajo en otra sesión. Última actualización: 7 de septiembre de 2026 (sesión Paso 6 — migración de dominio).
 
 ## 🎯 Para retomar rápido
 
@@ -12,6 +12,8 @@
 Varios bugs reales encontrados y arreglados en el camino (ver lista de bugs más abajo, #10-17): subida a R2 rota por streaming signature, descarga rota en Safari (dos veces), fotos perdidas si la cabina se queda sin internet, réplicas mínimas de Azure en 0 por defecto, entre otros.
 
 No quedan pasos pendientes del plan original. Lo que sigue son las "Mejoras recomendadas, no bloqueantes" más abajo (miniaturas, autenticación de admin, `/health`, tests) — ninguna es urgente para usar el sistema en un evento real.
+
+- **Paso 6 (7 sep 2026): esta app se movió de `somospix.com` (raíz) a `app.somospix.com`** — la raíz ahora sirve un proyecto de landing page aparte (`pix-landingpage`, repo `alonsocm/pix-photobooth`, mismo Cloudflare Workers/Pages). Ver detalle en el Paso 6 más abajo.
 
 Repo: **https://github.com/alonsocm/pix-dynamic-gallery** (público, rama `main`)
 
@@ -123,7 +125,7 @@ Ver la conversación completa para el razonamiento detallado de cada elección (
 ### Dominio
 
 - **`somospix.com`** — comprado en Cloudflare Registrar (~$10/año). Necesario porque los Tunnels nombrados de Cloudflare no ofrecen URL gratuita estable (a diferencia de Pages con `*.pages.dev`); la alternativa sin dominio (Quick Tunnel `*.trycloudflare.com`) cambia de URL en cada reinicio de `cloudflared`, inviable para una cabina que se prende/apaga por evento.
-- Uso planeado de subdominios: `api.somospix.com` → API (Tunnel), `somospix.com` (raíz) → frontend (Pages).
+- Uso de subdominios (desde el Paso 6): `api.somospix.com` → API (Tunnel), `app.somospix.com` → esta app (Pages/Workers), `somospix.com` (raíz) → landing page (proyecto aparte, `pix-landingpage`). Plan original (Pasos 1-5) tenía la app en la raíz; se migró a `app.somospix.com` para liberar la raíz para el landing.
 
 ### Paso 2 — Provisionar recursos (usuario, con guía de Claude) — **EN PROGRESO**
 
@@ -168,6 +170,19 @@ Checklist:
   - Verificado con `curl` (incluyendo headers CORS con `Origin: https://somospix.com`): responde 200 con datos reales de Neon (evento `xv-angie`, sus fotos con URLs de R2).
 - [x] Cloudflare Pages: `API_BASE_URL` → `https://pix-gallery.mangograss-89e14f71.westus.azurecontainerapps.io`, `HUB_BASE_URL` sin cambios (`https://api.somospix.com`), redeploy confirmado (`https://somospix.com/env.js` refleja la nueva URL).
 - [x] **Verificado end-to-end con la cabina realmente apagada**: `https://somospix.com/e/xv-angie/wall` carga las fotos con normalidad.
+
+### Paso 6 — Mover la app a `app.somospix.com`, liberar la raíz para el landing page — ✅ **COMPLETO**
+
+Motivo: el usuario tiene un proyecto de landing page de marketing (`pix-landingpage`, repo `alonsocm/pix-photobooth`, ya desplegado en Cloudflare Workers/Pages) y quiere que viva en la raíz `somospix.com`. Esta app pasa a un subdominio.
+
+- [x] Cloudflare (proyecto `pix-gallery`, Workers & Pages → Domains): agregado `app.somospix.com`, quitado `somospix.com`.
+- [x] Cloudflare (proyecto `pix-landingpage`): agregado `somospix.com` (raíz) como Custom Domain.
+- [x] DNS de la zona `somospix.com` confirmado: `app.somospix.com` → Worker `pix-gallery`, `somospix.com` → Worker `pix-landingpage`, `api.somospix.com` (Tunnel) e `img.somospix.com` (R2) sin cambios.
+- [x] Azure Container App `pix-gallery` (API standby): `Cors__AllowedOrigins__0` actualizado de `https://somospix.com` a `https://app.somospix.com` (se quitó `__1=https://www.somospix.com`, que nunca tuvo un registro DNS real).
+- [x] R2 bucket `pix` → Settings → CORS Policy: `AllowedOrigins` actualizado de `https://somospix.com` a `https://app.somospix.com` (necesario para que el botón "Descargar" del guest page, que usa `fetch`+`Blob`, no falle por CORS al traer la foto desde `img.somospix.com`).
+- [x] Repo: `tools/booth/env.production.example`, `tools/azure-standby/env.example` (`Cors__AllowedOrigins`), `README.md`, `PRODUCT.md`, `tools/booth/README.md` (URL del kiosk) actualizados a `app.somospix.com`.
+- [ ] **Pendiente en el usuario**: `tools/booth/.env.production` en la PC de la cabina (gitignored, no lo toca este repo) — actualizar `Cors__AllowedOrigins__0` a `https://app.somospix.com` ahí también, y reiniciar `start-booth.ps1` para que tome el cambio. Sin esto, la API nativa de la cabina seguirá rechazando por CORS a `app.somospix.com` aunque la instancia de Azure ya esté corregida.
+- [ ] **Pendiente en el usuario**: actualizar cualquier QR/enlace impreso o guardado que apunte a `somospix.com/kiosk/...` o `somospix.com/e/...` — ahora deben apuntar a `app.somospix.com`.
 
 ### Explícitamente pospuesto (a pedido del usuario)
 

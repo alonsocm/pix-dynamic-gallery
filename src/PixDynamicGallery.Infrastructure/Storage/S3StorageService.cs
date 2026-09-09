@@ -78,7 +78,7 @@ public class S3StorageService(
     /// for the same URL. Confirmed live: warming up with a plain, headerless GET (what this originally
     /// did) only populated the no-`Origin` variant — the one `&lt;img&gt;` tags and top-level
     /// navigation use — while the guest's actual download button uses `fetch()`, a CORS request that
-    /// sends `Origin: https://somospix.com`, hitting a still-cold variant of the exact same URL. So
+    /// sends `Origin: https://app.somospix.com`, hitting a still-cold variant of the exact same URL. So
     /// this warms up once per configured CORS origin too, not just the plain URL.
     /// </para>
     /// <para>

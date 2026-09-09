@@ -72,8 +72,9 @@ QR and every guest's phone, with no app install and no manual upload step.
 
 ## Brand Commitments
 
-- Product/brand name: **Pix** (repo, logo wordmark) doing business as **somospix.com** (the live
-  domain and guest-facing brand).
+- Product/brand name: **Pix** (repo, logo wordmark) doing business as **somospix.com** (the brand
+  domain). This app (kiosk/wall/admin) lives at **app.somospix.com**; the root `somospix.com` is a
+  separate marketing landing page project, not this repo.
 - Logo assets exist at `frontend/public/brand/` (`pix-logo-full.png`, `pix-mark.png`,
   `pix-wordmark.png`).
 - Admin UI copy is in **Spanish** (confirmed) and should stay that way — no i18n was requested
