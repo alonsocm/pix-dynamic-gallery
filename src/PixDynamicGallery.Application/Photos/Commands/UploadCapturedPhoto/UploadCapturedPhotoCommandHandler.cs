@@ -13,6 +13,7 @@ public class UploadCapturedPhotoCommandHandler(
     IApplicationDbContext context,
     IStorageService storageService,
     ILocalCaptureFileReader fileReader,
+    IPhotoStripCropper stripCropper,
     IImageThumbnailGenerator thumbnailGenerator,
     IPhotoNotifier notifier,
     ILogger<UploadCapturedPhotoCommandHandler> logger)
@@ -60,17 +61,50 @@ public class UploadCapturedPhotoCommandHandler(
 
         try
         {
-            await using var content = await fileReader.OpenReadAsync(request.LocalFilePath, cancellationToken);
+            await using var localContent = await fileReader.OpenReadAsync(request.LocalFilePath, cancellationToken);
 
-            var objectKey = $"{@event.Slug}/{photo.Id}{Path.GetExtension(photo.FileName)}";
-            var result = await storageService.UploadAsync(content, objectKey, photo.ContentType, cancellationToken);
+            // Sparkbooth's print composite duplicates the strip twice, side by side, so the physical
+            // print can be cut in half — crop it down to a single strip before it ever reaches
+            // storage/guests (see IPhotoStripCropper). Best-effort: if cropping doesn't apply or
+            // fails, fall back to uploading the original untouched rather than failing the capture.
+            Stream? croppedContent = null;
+            var contentToUpload = localContent;
+            if (stripCropper.CanCrop(photo.ContentType))
+            {
+                croppedContent = await stripCropper.CropToSingleStripAsync(localContent, photo.ContentType, cancellationToken);
+                if (croppedContent is not null)
+                {
+                    contentToUpload = croppedContent;
+                }
+                else if (localContent.CanSeek)
+                {
+                    // The cropper read (and failed to fully decode) the stream — rewind before the
+                    // upload below reads it from the top.
+                    localContent.Position = 0;
+                }
+            }
 
-            photo.MarkAsUploaded(result.ObjectKey, result.Url, result.SizeBytes);
-            await context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                var objectKey = $"{@event.Slug}/{photo.Id}{Path.GetExtension(photo.FileName)}";
+                var result = await storageService.UploadAsync(contentToUpload, objectKey, photo.ContentType, cancellationToken);
 
-            // Reuses the same (seekable FileStream) handle rather than reopening the local file —
-            // cheap, and the original upload above already proved the file is readable.
-            await GenerateAndAttachThumbnailAsync(@event.Slug, photo, content, cancellationToken);
+                photo.MarkAsUploaded(result.ObjectKey, result.Url, result.SizeBytes);
+                await context.SaveChangesAsync(cancellationToken);
+
+                // Generated from the same (already single-strip, if cropped) content that was just
+                // uploaded, so the wall thumbnail and the full-size download always show the guest
+                // the same photo.
+                contentToUpload.Position = 0;
+                await GenerateAndAttachThumbnailAsync(@event.Slug, photo, contentToUpload, cancellationToken);
+            }
+            finally
+            {
+                if (croppedContent is not null)
+                {
+                    await croppedContent.DisposeAsync();
+                }
+            }
         }
         catch (Exception ex)
         {

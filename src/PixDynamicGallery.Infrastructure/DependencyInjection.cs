@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         AddStorageProvider(services, configuration);
         services.AddSingleton<IImageThumbnailGenerator, ImageSharpThumbnailGenerator>();
+        services.AddSingleton<IPhotoStripCropper, ImageSharpPhotoStripCropper>();
 
         services.AddScoped<ILocalCaptureFileReader, LocalCaptureFileReader>();
 
