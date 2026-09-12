@@ -73,6 +73,13 @@ function absoluteUrlValidator(): ValidatorFn {
             </a>
           </div>
 
+          <a
+            [routerLink]="['/admin/events', created.slug, 'qr']"
+            class="w-full rounded-full bg-white/10 px-4 py-2 text-center font-semibold text-white"
+          >
+            🎫 Imprimir QR del muro
+          </a>
+
           <button type="button" (click)="reset()" class="text-sm text-white/50 underline">
             Crear otro evento
           </button>
