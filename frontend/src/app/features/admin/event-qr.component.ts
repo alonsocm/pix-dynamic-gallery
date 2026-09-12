@@ -2,6 +2,7 @@ import { Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { buildGuestWallUrl } from '../../core/event/guest-photo-url';
 import { EventDto } from '../../core/models/event.model';
+import { renderQrPrintCardImage } from './qr-print-card-image';
 import { QrCodeComponent } from '../../shared/ui/qr-code/qr-code.component';
 
 /**
@@ -74,21 +75,40 @@ import { QrCodeComponent } from '../../shared/ui/qr-code/qr-code.component';
           </div>
         </div>
 
-        <div class="flex gap-2 print:hidden">
-          <button
-            type="button"
-            (click)="print()"
-            class="rounded-full bg-linear-to-r from-[#FF007F] via-[#9333EA] to-[#FF007F] px-6 py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(255,0,127,0.45),0_0_40px_rgba(255,0,127,0.2)] active:scale-95"
-          >
-            🖨️ Imprimir
-          </button>
-          <button
-            type="button"
-            (click)="copyLink()"
-            class="rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white active:scale-95"
-          >
-            {{ copied() ? '✅ ¡Copiado!' : '🔗 Copiar link' }}
-          </button>
+        <div class="flex flex-col items-center gap-3 print:hidden">
+          <div class="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              (click)="downloadImage()"
+              [disabled]="downloading()"
+              class="rounded-full bg-linear-to-r from-[#FF007F] via-[#9333EA] to-[#FF007F] px-6 py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(255,0,127,0.45),0_0_40px_rgba(255,0,127,0.2)] active:scale-95 disabled:opacity-50"
+            >
+              {{ downloading() ? 'Generando…' : '⬇️ Descargar imagen' }}
+            </button>
+            <button
+              type="button"
+              (click)="copyLink()"
+              class="rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white active:scale-95"
+            >
+              {{ copied() ? '✅ ¡Copiado!' : '🔗 Copiar link' }}
+            </button>
+            <button
+              type="button"
+              (click)="print()"
+              class="rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white/70 active:scale-95"
+            >
+              🖨️ Imprimir desde el navegador
+            </button>
+          </div>
+          <p class="max-w-sm text-center text-xs text-white/40">
+            En una impresora fotográfica dedicada (Canon SELPHY y similares) usa
+            <strong class="text-white/60">Descargar imagen</strong> e imprímela desde la app de
+            Canon o por USB/SD — el diálogo de impresión del navegador puede deformar el diseño o
+            repartirlo en dos hojas en ese tipo de impresoras.
+          </p>
+          @if (downloadError()) {
+            <p class="text-xs text-red-400">{{ downloadError() }}</p>
+          }
         </div>
       </div>
     </div>
@@ -98,6 +118,8 @@ export class EventQrComponent {
   readonly event = input.required<EventDto>();
 
   protected readonly copied = signal(false);
+  protected readonly downloading = signal(false);
+  protected readonly downloadError = signal<string | null>(null);
   protected readonly wallUrl = computed(() => buildGuestWallUrl(this.event()));
 
   protected print(): void {
@@ -109,5 +131,25 @@ export class EventQrComponent {
       this.copied.set(true);
       setTimeout(() => this.copied.set(false), 2000);
     });
+  }
+
+  /** Renders the card as a flat JPEG (see qr-print-card-image.ts for why) and downloads it. */
+  protected async downloadImage(): Promise<void> {
+    this.downloading.set(true);
+    this.downloadError.set(null);
+
+    try {
+      const blob = await renderQrPrintCardImage({ eventName: this.event().name, wallUrl: this.wallUrl() });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `qr-muro-${this.event().slug}.jpg`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      this.downloadError.set('No se pudo generar la imagen. Intenta de nuevo.');
+    } finally {
+      this.downloading.set(false);
+    }
   }
 }
