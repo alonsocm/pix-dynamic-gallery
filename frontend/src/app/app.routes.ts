@@ -61,6 +61,12 @@ export const routes: Routes = [
               import('./features/admin/event-finance.component').then((m) => m.EventFinanceComponent),
           },
           {
+            // Same :eventId-is-the-slug convention as .../photos above.
+            path: 'events/:eventId/qr',
+            resolve: { event: eventResolver },
+            loadComponent: () => import('./features/admin/event-qr.component').then((m) => m.EventQrComponent),
+          },
+          {
             path: 'agenda',
             loadComponent: () =>
               import('./features/admin/agenda-list.component').then((m) => m.AgendaListComponent),

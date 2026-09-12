@@ -69,6 +69,12 @@ import { AdminEventDto } from '../../core/models/event.model';
                 >
                   💰 Finanzas
                 </a>
+                <a
+                  [routerLink]="['/admin/events', event.slug, 'qr']"
+                  class="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white"
+                >
+                  🎫 QR
+                </a>
                 <button
                   type="button"
                   (click)="copyLink(event)"

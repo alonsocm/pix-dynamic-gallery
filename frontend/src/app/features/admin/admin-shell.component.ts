@@ -26,7 +26,7 @@ const NAV_ITEMS: AdminNavItem[] = [{ path: '/admin', label: '🏠 Dashboard', ex
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   template: `
     <div class="min-h-screen">
-      <header class="flex flex-wrap items-center justify-between gap-3 bg-white/5 px-4 py-3 sm:px-6">
+      <header class="flex flex-wrap items-center justify-between gap-3 bg-white/5 px-4 py-3 sm:px-6 print:hidden">
         <span class="text-lg font-bold text-white/90">PIX</span>
 
         <nav class="flex flex-wrap gap-2">

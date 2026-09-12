@@ -50,3 +50,28 @@ body {
     animation: none;
   }
 }
+
+/* The app's only print target today is EventQrComponent's placard (`.qr-print-card`), sized for a
+   standard 4x6in photo print. `body`'s own void-black background would otherwise print too (or
+   get silently dropped by the browser's "background graphics" print setting, leaving whatever the
+   printer defaults to) — force plain white paper instead. If a second print use case ever needs a
+   different page size, give it a more specific selector rather than widening this one. */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  @page {
+    size: 4in 6in;
+    margin: 0;
+  }
+
+  /* The card's gradient frame/wordmark/QR-frame are background-color and bg-clip-text fills —
+     Chrome drops those on print unless the page explicitly opts in, regardless of the printer
+     dialog's own "background graphics" checkbox. */
+  .qr-print-card,
+  .qr-print-card * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
