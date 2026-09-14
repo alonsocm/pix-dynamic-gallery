@@ -5,11 +5,13 @@ where Sparkbooth saves each capture, uploads it to cloud storage, and pushes it 
 SignalR — to a kiosk screen (with a dynamic QR code) and to every guest's phone via a mobile-first
 PWA and a Pinterest-style live wall.
 
-> **Status:** Full stack built and running in production — backend (.NET 9), frontend (Angular 22
-> on Cloudflare Pages), Neon Postgres, Cloudflare R2 storage, Cloudflare Tunnel. The one remaining
-> step is installing it on the actual photobooth cabin PC — see
+> **Status:** Full stack running in production — backend (.NET 9) native on the photobooth cabin PC,
+> frontend (Angular 22) on Cloudflare Pages, Neon Postgres, Cloudflare R2 storage, Cloudflare
+> Tunnel. This repo is scoped to just the cabin (capture pipeline + realtime) and the frontend —
+> event management, agenda, finance and inventory now live in a separate repo, **`pix-app`**
+> (Cloudflare Workers), which serves all of that to the frontend directly. See
 > [Production deployment](#production-deployment). For the detailed history of every provisioning
-> decision and the current state of each step, see [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md).
+> decision, see [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md).
 
 ## How it works
 
@@ -105,6 +107,13 @@ AWS/Azure account), the API on **http://localhost:8080** (Swagger at `/swagger` 
 and the Angular frontend on **http://localhost:4200**. Migrations run automatically on startup; a
 `demo` event is seeded.
 
+> **This alone is only the cabin half of the app** — enough to test capture (watcher → storage →
+> SignalR → kiosk/wall) end to end, but the frontend's admin screens (agenda, finance, inventory)
+> and the rest of event management now live in `pix-app` (separate repo, `D:\src\pix-app`), not
+> here. For those to work locally too, also run `npm run dev` in that repo (`wrangler dev`, default
+> `http://localhost:8787`) — the frontend's local `environment.ts`/`docker-compose.yml` already
+> point `apiBaseUrl` there by default.
+
 > The watcher monitors a folder path stored *on the `Event` row*, not a path baked into the
 > container. To let the containerized API see files Sparkbooth writes on the Windows host, that
 > folder is bind-mounted in `docker-compose.yml` (the API service's `volumes:` entry, currently
@@ -162,12 +171,17 @@ environment variables (`Storage__AwsS3__BucketName`), or user-secrets in Develop
 
 ## API surface
 
+Deliberately small — just what the watcher pipeline needs plus a couple of endpoints for local
+testing without Sparkbooth hardware (see `tools/smoke-test.ps1`, `COMO_PROBAR.txt`). Everything
+else (listing/activating events, deleting photos, agenda, finance, inventory) lives in `pix-app`
+now, not here.
+
 | Method | Route | Purpose |
 |---|---|---|
-| `POST` | `/api/events` | Create an event |
+| `POST` | `/api/events` | Create an event (mainly for local testing) |
 | `GET` | `/api/events/{slug}` | Resolve an event by its URL slug |
-| `GET` | `/api/events/{eventId}/photos` | Paginated, uploaded-only photo feed (live wall) |
-| `GET` | `/api/events/{eventId}/photos/{photoId}` | Single photo (guest landing page) |
+| `GET` | `/api/events/{eventId}/photos` | Paginated, uploaded-only photo feed |
+| `GET` | `/api/events/{eventId}/photos/{photoId}` | Single photo |
 | `POST` | `/api/events/{eventId}/photos` | Manual multipart upload — same pipeline as the watcher |
 | `WS` | `/hubs/event` | SignalR hub — `JoinEventGroup`/`LeaveEventGroup`, receives `OnPhotoUploaded`/`OnPhotoFailed` |
 
@@ -195,23 +209,23 @@ provider's free tier, chosen for a specific constraint:
 | Piece | Where | Why |
 |---|---|---|
 | Frontend | **Cloudflare Pages** (`app.somospix.com`) | Free CDN, auto-deploy from this repo's `main` branch. Deployed via `npx wrangler deploy` — see `frontend/wrangler.jsonc`. The domain's root (`somospix.com`) is a separate marketing landing page project (`pix-landingpage`), not this repo |
-| API + watcher (writes, realtime) | **Native on the photobooth cabin PC** | The watcher needs the real local filesystem — it can't run in the cloud without adding a separate sync agent |
-| API standby (reads, always-on) | **Azure Container Apps** (`Watcher:Enabled=false`) | Same Docker image, watcher off — keeps the gallery (wall, guest photo page, creating an event) reachable even when the cabin PC is powered off, since none of those endpoints touch the local filesystem. See `tools/azure-standby/env.example`. |
-| Exposing the cabin's API | **Cloudflare Tunnel** (`api.somospix.com` → `localhost:8080`) | No port-forwarding, works behind any venue's WiFi/NAT, supports WebSockets (SignalR) |
-| Database | **Neon** (serverless Postgres) | Free tier, sleeps when idle — irrelevant for per-event usage, shared by both API instances |
+| API + watcher (writes, realtime) | **Native on the photobooth cabin PC** | The watcher needs the real local filesystem — it can't run in the cloud without adding a separate sync agent. This is the only backend this repo runs. |
+| Event/photo reads, agenda, finance, inventory | **`pix-app`** (Cloudflare Workers, separate repo) | Serves the frontend directly for everything that doesn't touch the cabin's local filesystem — free forever (request-billed, no idle charge), unlike the Azure Container Apps standby this replaced (decommissioned — see `ESTADO_PROYECTO.md`) |
+| Exposing the cabin's API | **Cloudflare Tunnel** (`api.somospix.com` → `localhost:8080`) | No port-forwarding, works behind any venue's WiFi/NAT, supports WebSockets (SignalR) — this is the **only** thing the frontend still reaches on the cabin |
+| Database | **Neon** (serverless Postgres) | Free tier, sleeps when idle. Shared by the cabin and `pix-app` — the cabin's EF Core model only maps `Events`/`Photos` now, `pix-app` owns the rest of the schema |
 | Photo storage | **Cloudflare R2** | S3-compatible (same `IStorageService` code as MinIO), and no egress cost — guests repeatedly view/download photos |
 
-The frontend already keeps `apiBaseUrl` (REST) and `hubBaseUrl` (SignalR) as independent config
-values (`AppConfigService`) — `API_BASE_URL` points at the Azure standby instance, `HUB_BASE_URL`
-stays pointed at the cabin's Tunnel. With the cabin off, the gallery still loads (via Azure); only
-realtime push (new photo appearing live on the kiosk/wall) is unavailable, which is expected since
-nothing new is being captured while the watcher isn't running anyway.
+The frontend keeps `apiBaseUrl` (REST) and `hubBaseUrl` (SignalR) as independent config values
+(`AppConfigService`) — `API_BASE_URL` points at `pix-app`, `HUB_BASE_URL` stays pointed at the
+cabin's Tunnel. With the cabin off, the gallery still loads (via `pix-app`); only realtime push
+(new photo appearing live on the kiosk/wall) is unavailable, which is expected since nothing new
+is being captured while the watcher isn't running anyway.
 
-**The actual next step to bring an event online is the cabin PC install**, documented end to end
-in [`tools/booth/README.md`](tools/booth/README.md): installing the .NET 9 Runtime (not the SDK)
-and `cloudflared`, publishing the API, filling in the R2/Neon/Tunnel secrets, and configuring the
-kiosk browser. For the full history of *why* each provider/choice was picked and the current state
-of every provisioning step, see [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md).
+**To bring an event online, the cabin PC needs to be running**, documented end to end in
+[`tools/booth/README.md`](tools/booth/README.md): installing the .NET 9 Runtime (not the SDK) and
+`cloudflared`, publishing the API, filling in the R2/Neon/Tunnel secrets, and configuring the kiosk
+browser. For the full history of *why* each provider/choice was picked, see
+[`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md).
 
 ### Local Docker vs. production
 

@@ -1,8 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using PixDynamicGallery.Api.Auth;
 using PixDynamicGallery.Application.Common.Models;
-using PixDynamicGallery.Application.Photos.Commands.DeletePhotos;
 using PixDynamicGallery.Application.Photos.Commands.UploadCapturedPhoto;
 using PixDynamicGallery.Application.Photos.Dtos;
 using PixDynamicGallery.Application.Photos.Queries.GetEventPhotos;
@@ -10,6 +8,11 @@ using PixDynamicGallery.Application.Photos.Queries.GetPhotoById;
 
 namespace PixDynamicGallery.Api.Controllers;
 
+/// <summary>
+/// Kept only for local testing/fallback (see tools/smoke-test.ps1, COMO_PROBAR.txt) — the actual
+/// app reads/manages photos through the `pix-app` Cloudflare Worker (separate repo) now, which
+/// also owns bulk delete. This is not what serves the guest-facing wall anymore.
+/// </summary>
 [ApiController]
 [Route("api/events/{eventId:guid}/photos")]
 [Produces("application/json")]
@@ -17,7 +20,7 @@ public class PhotosController(ISender sender) : ControllerBase
 {
     private const long MaxUploadBytes = 50 * 1024 * 1024; // 50 MB — comfortably covers Sparkbooth GIFs.
 
-    /// <summary>Paginated feed of uploaded photos for an event, newest first — powers the <c>/e/:eventId/wall</c> live wall.</summary>
+    /// <summary>Paginated feed of uploaded photos for an event, newest first.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedList<PhotoDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PaginatedList<PhotoDto>>> GetEventPhotos(
@@ -86,20 +89,4 @@ public class PhotosController(ISender sender) : ControllerBase
             }
         }
     }
-
-    /// <summary>
-    /// Admin-only bulk hard-delete. POST (not DELETE-with-body) to sidestep client/proxy
-    /// ambiguity around bodies on HTTP DELETE.
-    /// </summary>
-    [HttpPost("delete")]
-    [AdminAuth]
-    [ProducesResponseType(typeof(DeletePhotosResult), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<DeletePhotosResult>> DeletePhotos(Guid eventId, DeletePhotosRequest request, CancellationToken cancellationToken)
-    {
-        var result = await sender.Send(new DeletePhotosCommand { EventId = eventId, PhotoIds = request.PhotoIds }, cancellationToken);
-        return Ok(result);
-    }
 }
-
-public record DeletePhotosRequest(List<Guid> PhotoIds);
