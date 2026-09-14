@@ -95,7 +95,10 @@ services:
     environment:
       # Browser-resolved URLs (consumed client-side), not the Docker-internal `api` hostname —
       # the guest's/kiosk's own browser is what fetches these, not this container.
-      API_BASE_URL: "http://localhost:8080"
+      # API_BASE_URL points at a local `pix-app` (separate repo D:\src\pix-app, `npm run dev`,
+      # default port 8787) — event/photo reads, agenda, finance and inventory live there now.
+      # HUB_BASE_URL stays on this stack's own `api` container — the only thing it still serves.
+      API_BASE_URL: "http://localhost:8787"
       HUB_BASE_URL: "http://localhost:8080"
     depends_on:
       - api

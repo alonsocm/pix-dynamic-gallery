@@ -1,17 +1,29 @@
 # Estado del proyecto — Pix Dynamic Gallery
 
-> Documento vivo para retomar el trabajo en otra sesión. Última actualización: 7 de septiembre de 2026 (sesión Paso 6 — migración de dominio).
+> Documento vivo para retomar el trabajo en otra sesión. Última actualización: 14 de septiembre de
+> 2026 (Paso 7 — incidente de Azure, migración a `pix-app`, y reducción de este repo a solo cabina).
 
 ## 🎯 Para retomar rápido
 
-**Proyecto completo, Pasos 1-5 ✅** — todo el sistema probado de punta a punta en producción real:
+**Proyecto completo, Pasos 1-7 ✅.** El Paso 5 original (standby en Azure Container Apps) quedó
+**superado por el Paso 7**: Azure se suspendió por facturación el 13 sep 2026, y esa pieza se
+migró por completo a un repo nuevo, **`pix-app`** (Cloudflare Workers, `D:\src\pix-app`,
+`https://pix-app.alonso-casmax.workers.dev`) — ver detalle en el Paso 7 más abajo y en
+[`MIGRACION_WORKERS_PLAN.md`](MIGRACION_WORKERS_PLAN.md).
 
-- Cabina (API nativa + `cloudflared`) + Cloudflare Pages + R2 + Neon + Tunnel, probado desde un iPhone con datos móviles: captura → watcher → R2 → SignalR → kiosk → QR → foto de invitado → descargar → compartir.
-- **Galería sigue disponible con la cabina apagada** (Paso 5): segunda instancia de la misma API, sin el watcher, siempre encendida en **Azure Container Apps** (`pix-gallery`, West US) — el frontend usa `apiBaseUrl` (→ Azure, siempre) y `hubBaseUrl` (→ cabina, solo tiempo real) por separado.
+Este repo (`pix-dynamic-gallery`) quedó reducido a solo lo que la cabina necesita: el watcher, el
+hub de SignalR, y un puñado de endpoints para probar la captura localmente sin `pix-app` ni
+hardware de Sparkbooth (`tools/smoke-test.ps1`, `COMO_PROBAR.txt`). Agenda, finanzas, inventario, y
+la administración de eventos ya no viven aquí — viven en `pix-app`, contra la misma base de Neon.
+
+- Cabina (API nativa + `cloudflared`) + Cloudflare Pages + R2 + Neon + Tunnel + `pix-app`, probado
+  de punta a punta en producción real: captura → watcher → R2 → SignalR → kiosk → QR → foto de
+  invitado → descargar → compartir; y por separado, galería/admin vía `pix-app` con la cabina
+  apagada.
 
 Varios bugs reales encontrados y arreglados en el camino (ver lista de bugs más abajo, #10-17): subida a R2 rota por streaming signature, descarga rota en Safari (dos veces), fotos perdidas si la cabina se queda sin internet, réplicas mínimas de Azure en 0 por defecto, entre otros.
 
-No quedan pasos pendientes del plan original. Lo que sigue son las "Mejoras recomendadas, no bloqueantes" más abajo (miniaturas, autenticación de admin, `/health`, tests) — ninguna es urgente para usar el sistema en un evento real.
+No quedan pasos pendientes del plan original. Lo que sigue son las "Mejoras recomendadas, no bloqueantes" más abajo — ninguna es urgente para usar el sistema en un evento real.
 
 - **Paso 6 (7 sep 2026): esta app se movió de `somospix.com` (raíz) a `app.somospix.com`** — la raíz ahora sirve un proyecto de landing page aparte (`pix-landingpage`, repo `alonsocm/pix-photobooth`, mismo Cloudflare Workers/Pages). Ver detalle en el Paso 6 más abajo.
 
@@ -155,7 +167,12 @@ Ver la conversación completa para el razonamiento detallado de cada elección (
 - [x] Evento de prueba creado en producción (`xv-angie`)
 - [x] Probado **desde un iPhone con datos móviles** (no WiFi local): captura → watcher → R2 → SignalR → kiosk → QR → foto de invitado → descargar → compartir. Todo el circuito confirmado funcionando de punta a punta.
 
-### Paso 5 — Galería disponible con la cabina apagada — ✅ **COMPLETO**
+### Paso 5 — Galería disponible con la cabina apagada — ⚠️ **HISTÓRICO, superado por el Paso 7**
+
+> Esta pieza (el standby en Azure Container Apps) se cayó por una suspensión de facturación el 13
+> sep 2026 y se migró por completo a `pix-app` (Cloudflare Workers) — ver Paso 7. Se deja este
+> registro tal cual para el historial de *por qué* se eligió Azure en su momento; el Container App,
+> el resource group `pix` de Azure, y `tools/azure-standby/` ya no existen.
 
 Motivo: se descubrió (probando el Paso 4) que con la cabina apagada, `api.somospix.com` responde 504 — el wall/página de invitado dejan de funcionar por completo aunque las fotos sigan intactas en R2/Neon, porque el frontend solo sabe hablar con la API, nunca directo con la base o el storage. Plan completo y razonamiento en `C:\Users\Alonso\.claude\plans\tingly-nibbling-ritchie.md`. Resumen:
 
@@ -183,6 +200,40 @@ Motivo: el usuario tiene un proyecto de landing page de marketing (`pix-landingp
 - [x] Repo: `tools/booth/env.production.example`, `tools/azure-standby/env.example` (`Cors__AllowedOrigins`), `README.md`, `PRODUCT.md`, `tools/booth/README.md` (URL del kiosk) actualizados a `app.somospix.com`.
 - [ ] **Pendiente en el usuario**: `tools/booth/.env.production` en la PC de la cabina (gitignored, no lo toca este repo) — actualizar `Cors__AllowedOrigins__0` a `https://app.somospix.com` ahí también, y reiniciar `start-booth.ps1` para que tome el cambio. Sin esto, la API nativa de la cabina seguirá rechazando por CORS a `app.somospix.com` aunque la instancia de Azure ya esté corregida.
 - [ ] **Pendiente en el usuario**: actualizar cualquier QR/enlace impreso o guardado que apunte a `somospix.com/kiosk/...` o `somospix.com/e/...` — ahora deben apuntar a `app.somospix.com`.
+
+### Paso 7 — Incidente de Azure, migración a `pix-app`, reducción de este repo — ✅ **COMPLETO**
+
+Motivo: la suscripción Free Trial de Azure quedó suspendida por facturación el 13 sep 2026
+(`ManagedClusterSuspended`, ver diagnóstico con `az`) — el Container App `pix-gallery` dejó de
+responder por completo, y con él la galería/admin cuando la cabina está apagada. Se decidió no
+reactivar la suscripción sino migrar esa pieza a un modelo verdaderamente gratis-para-siempre
+(facturación por request, no por tiempo prendido). Plan completo y razonamiento en
+[`MIGRACION_WORKERS_PLAN.md`](MIGRACION_WORKERS_PLAN.md).
+
+- [x] Repo nuevo **`pix-app`** (`D:\src\pix-app`, TypeScript + Hono + Drizzle, driver HTTP de Neon,
+  binding nativo a R2) — Fase 1 (Events + Photos) y Fase 2 (Agenda, Finance, Inventory,
+  EventTransactions) completas, espejo del contrato JSON exacto del backend original.
+- [x] Desplegado en `https://pix-app.alonso-casmax.workers.dev` (subdominio custom pendiente de
+  decidir — no urgente, la URL de Workers funciona igual).
+- [x] Corte confirmado: `API_BASE_URL` en Cloudflare Pages apunta a `pix-app`. `HUB_BASE_URL` sigue
+  sin cambios (`api.somospix.com`, la cabina) — el tiempo real nunca se movió.
+- [x] Container App `pix-gallery` y resource group `pix` completo borrados en Azure — cero recursos,
+  cero riesgo de otra suspensión por facturación.
+- [x] **Este repo reducido a solo lo que la cabina necesita**: se borraron por completo
+  `Domain/Entities/{AgendaEntry,AgendaDeposit,EventTransaction,FinanceSettings,GlobalExpense,PaperPurchase,UsbPurchase}`,
+  sus enums, toda `Application/{Agenda,Finance,Inventory}/`, los controllers correspondientes, sus
+  configuraciones de EF Core, y `AdminAuthAttribute`/`AdminOptions` (quedó sin ningún endpoint que
+  proteger). También se quitaron de `EventsController`/`PhotosController` las acciones que
+  duplicaban a `pix-app` (`GetAll`, `SetActive`, `DeletePhotos`) — se dejaron `Create`, `GetBySlug`,
+  `GetEventPhotos`, `GetPhoto`, `UploadPhoto` porque `tools/smoke-test.ps1` y `COMO_PROBAR.txt` los
+  usan para probar la captura sin depender de `pix-app` ni de hardware de Sparkbooth.
+  - **Nota de seguridad importante**: Neon sigue teniendo las 9 tablas — `pix-app` sigue
+    leyendo/escribiendo 7 de ellas. El modelo de EF Core de este repo ya no las describe, pero
+    `Migrations/` se dejó intacta a propósito. **Nunca correr `dotnet ef migrations add` sin volver
+    a agregar esas entidades primero** — generaría una migración que borra esas tablas en Neon.
+  - Verificado con `dotnet build` sobre toda la solución: compila limpio, 0 errores.
+- [x] `tools/azure-standby/` borrado. `README.md`/`PRODUCT.md` actualizados para reflejar la
+  arquitectura actual (cabina + `pix-app`, sin Azure).
 
 ### Explícitamente pospuesto (a pedido del usuario)
 

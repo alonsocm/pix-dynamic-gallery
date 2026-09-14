@@ -51,16 +51,19 @@ QR and every guest's phone, with no app install and no manual upload step.
 - The operator manages events, bookings, money, and consumables inventory from the admin screens,
   normally away from the event itself (office/personal time, not live at the venue).
 - Production topology (as of Sept 2026): Cloudflare Pages (frontend), Neon Postgres, Cloudflare R2
-  (photo storage), Cloudflare Tunnel (exposes the cabin API), Azure Container Apps (always-on
-  read-only API standby so the gallery survives the cabin being powered off between events). See
-  `README.md` / `ESTADO_PROYECTO.md` for the full topology and provisioning history.
+  (photo storage), Cloudflare Tunnel (exposes the cabin API for realtime only), `pix-app`
+  (Cloudflare Workers, separate repo — serves event/photo reads, agenda, finance and inventory, so
+  the gallery survives the cabin being powered off between events; replaced an Azure Container
+  Apps standby that got decommissioned after a billing suspension). See `README.md` /
+  `ESTADO_PROYECTO.md` for the full topology and provisioning history.
 
 ## Capabilities and Constraints
 
 - Clean Architecture (.NET 9: Domain/Application/Infrastructure/Api) + Angular 22 frontend
   (standalone components, signals, zoneless), Tailwind CSS v4.
-- Admin auth is a single shared password (`AdminOptions.Password`, empty = auth disabled) — there
+- Admin auth is a single shared password, enforced by `pix-app` (`ADMIN_PASSWORD` secret) — there
   is no per-user account system; this matches the confirmed solo-operator model, not a gap to fix.
+  This repo's own API has no admin-gated endpoints anymore (see `ESTADO_PROYECTO.md`).
 - Real-time delivery is SignalR-only; the guest/wall experience degrades to REST polling on load
   but has no offline mode.
 - The watcher requires a real local filesystem, which is why the write-side API cannot fully move
