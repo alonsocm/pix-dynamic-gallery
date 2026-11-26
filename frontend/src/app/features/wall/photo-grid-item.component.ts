@@ -11,6 +11,8 @@ import { PhotoDto } from '../../core/models/photo.model';
  * The tile is a native `<button>` (not a `<div>` with a manual click handler) so tap/click,
  * keyboard activation (Enter/Space) and focus styling all come for free — `touch-manipulation`
  * removes the ~300ms tap delay some mobile browsers still apply to ambiguous double-tap targets.
+ * A corner magnifier (decorative — the button's accessible name is "Ver foto en HD") is the
+ * visual cue that the thumbnail is tappable and opens the full photo, not the file itself.
  *
  * Entrance is a Polaroid/photo-booth drop-in (`.animate-photo-drop`, keyframes in styles.css):
  * each tile falls in tilted and settles flat. `[index]` staggers the delay on initial load/
@@ -30,7 +32,8 @@ import { PhotoDto } from '../../core/models/photo.model';
     <button
       type="button"
       (click)="select.emit()"
-      class="block w-full touch-manipulation cursor-pointer rounded-photo text-left transition active:scale-[0.98]"
+      aria-label="Ver foto en HD"
+      class="relative block w-full touch-manipulation cursor-pointer rounded-photo text-left transition active:scale-[0.98]"
     >
       @defer (on viewport; prefetch on idle) {
         <img [src]="thumbSrc()" [alt]="photo().fileName || 'Foto del evento'" loading="lazy" class="w-full rounded-photo" />
@@ -43,6 +46,23 @@ import { PhotoDto } from '../../core/models/photo.model';
           ⚠️
         </div>
       }
+      <span
+        aria-hidden="true"
+        class="pointer-events-none absolute right-2 bottom-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white shadow-md ring-1 ring-white/30 sm:h-9 sm:w-9"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="h-4 w-4"
+        >
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m20 20-3.2-3.2" />
+        </svg>
+      </span>
     </button>
   `,
 })

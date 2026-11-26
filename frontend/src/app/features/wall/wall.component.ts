@@ -12,21 +12,53 @@ import { WallPhotosService } from './wall-photos.service';
  * IntersectionObserver sentinel, laid out with zero-dependency Tailwind CSS multi-column masonry
  * (native CSS Grid `masonry` isn't broadly supported yet, so no JS masonry library is needed
  * either way).
+ *
+ * Guests were long-pressing the grid thumbnails because nothing told them a tap opens the photo
+ * (and the HD download). The hint lives in a sticky header band — pinned on a phone and on a
+ * projector, inset by `env(safe-area-inset-*)` (needs `viewport-fit=cover`) — with the masonry
+ * starting underneath it, so the chip never sits on top of a photo.
  */
 @Component({
   selector: 'app-wall',
   imports: [PhotoGridItemComponent, PhotoLightboxComponent],
   providers: [WallPhotosService], // route-scoped: a fresh instance (and fresh state) per navigation into this route
   template: `
-    <img
-      src="brand/pix-wordmark.png"
-      alt="PIX"
-      class="pointer-events-none fixed top-4 left-4 z-10 h-7 w-auto opacity-70 sm:h-9"
-    />
+    <header
+      class="sticky top-0 z-20 border-b border-white/10 bg-ink-900 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-3 pl-[max(1rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pb-4 sm:pl-[max(1.5rem,env(safe-area-inset-left))]"
+    >
+      <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+        <img src="brand/pix-wordmark.png" alt="PIX" class="h-7 w-auto opacity-80 sm:h-9" />
+        <h1 class="text-center text-lg leading-tight font-bold text-white/90 sm:text-2xl">
+          {{ event().name }} — Muro en vivo
+        </h1>
+        <!-- Same asset, hidden, so the title stays optically centered beside the wordmark. -->
+        <img src="brand/pix-wordmark.png" alt="" aria-hidden="true" class="invisible h-7 w-auto sm:h-9" />
+      </div>
 
-    <div class="min-h-screen p-4 sm:p-6">
-      <h1 class="mb-6 text-center text-2xl font-bold text-white/90">{{ event().name }} — Muro en vivo</h1>
+      <p
+        role="note"
+        class="mx-auto mt-3 flex w-fit max-w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-center text-sm leading-snug font-semibold text-white shadow-md sm:px-5 sm:text-base lg:px-6 lg:py-2.5 lg:text-xl"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          class="h-4 w-4 shrink-0 sm:h-5 sm:w-5 lg:h-6 lg:w-6"
+        >
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m20 20-3.2-3.2" />
+        </svg>
+        Toca tu foto para verla y descargarla en HD
+      </p>
+    </header>
 
+    <div
+      class="min-h-screen pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pl-[max(1.5rem,env(safe-area-inset-left))]"
+    >
       @if (wallPhotos.photos().length > 0) {
         <div class="columns-2 gap-4 sm:columns-3 md:columns-4 lg:columns-5">
           @for (photo of wallPhotos.photos(); track photo.id; let i = $index) {
@@ -72,16 +104,13 @@ export class WallComponent implements OnInit {
     this.destroyRef.onDestroy(() => this.unlockBodyScroll());
 
     // Realtime merge: every new global lastPhotoUploaded() push gets filtered to this event and
-    // prepended (allowSignalWrites — prependRealtime writes wallPhotos.photos internally).
-    effect(
-      () => {
-        const notification = this.signalR.lastPhotoUploaded();
-        if (notification && notification.eventId === this.event().id) {
-          this.wallPhotos.prependRealtime(notification);
-        }
-      },
-      { allowSignalWrites: true },
-    );
+    // prepended. prependRealtime writes wallPhotos.photos; effect() allows that write directly.
+    effect(() => {
+      const notification = this.signalR.lastPhotoUploaded();
+      if (notification && notification.eventId === this.event().id) {
+        this.wallPhotos.prependRealtime(notification);
+      }
+    });
 
     // Pagination: once the sentinel element exists in the DOM (after first render), watch it and
     // load the next page whenever it scrolls into view.
